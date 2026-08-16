@@ -1,0 +1,53 @@
+{
+  "name": "@farksecurity/phish-signals",
+  "version": "0.1.0",
+  "description": "Heuristic phishing-detection engine: URL/domain typosquat and homograph checks, SPF/DKIM/DMARC-aware header analysis, Received-chain spoofing checks, IOC defang/refang, MITRE ATT&CK mapping, Sigma rule generation, and parsing for raw .eml/.msg messages plus embedded QR codes.",
+  "license": "MIT",
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "mailparser": "^3.9.15",
+    "@kenjiuno/msgreader": "^1.28.0",
+    "jsqr": "^1.4.0",
+    "pngjs": "^7.0.0",
+    "jpeg-js": "^0.4.4"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "pretest": "tsc -p tsconfig.test.json",
+    "test": "node --test test/*.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "phishing",
+    "security",
+    "detection",
+    "email-security",
+    "typosquatting",
+    "homograph",
+    "punycode",
+    "mitre-attack",
+    "sigma",
+    "eml",
+    "msg",
+    "outlook",
+    "qr-code"
+  ]
+}
