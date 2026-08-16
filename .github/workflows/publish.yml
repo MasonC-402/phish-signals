@@ -1,0 +1,69 @@
+name: Publish to npm
+
+# Lives inside packages/phish-signals/ in the source (private) repo rather
+# than in that repo's own top-level .github/workflows/ — the mirror workflow
+# (in the private repo) subtree-splits this whole directory and force-pushes
+# it to this public repo's main, rerooted so packages/phish-signals/X becomes
+# just X. A workflow file added directly to the public repo (not sourced from
+# here) would be wiped out by the next sync, since the mirror replaces main's
+# tree wholesale rather than merging into it.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  # Enables npm provenance (cryptographic attestation that this exact
+  # workflow run built and published the package) via OIDC — no extra secret
+  # needed for it beyond this permission.
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      # No package-lock.json is published here (this is a workspace member
+      # in the source repo, where the lockfile lives at the workspace root) —
+      # `npm install`, not `npm ci`.
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+      # The mirror runs on *every* change under packages/phish-signals/, most
+      # of which won't be a version bump — publishing is gated on the version
+      # in package.json not already existing on the registry, so an ordinary
+      # content-only sync is a clean no-op here instead of a failed run.
+      - name: Check whether this version is already published
+        id: check
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "already_published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish to npm
+        if: steps.check.outputs.already_published == 'false'
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Skip (already published)
+        if: steps.check.outputs.already_published == 'true'
+        run: echo "${{ steps.check.outputs.name }}@${{ steps.check.outputs.version }} is already on npm — bump the version in package.json to publish a new release."
