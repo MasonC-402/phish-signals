@@ -11,6 +11,11 @@ name: Publish to npm
 on:
   push:
     branches: [main]
+  # Lets a failed run (a transient registry issue, say) be retried without a
+  # throwaway commit — same reasoning as the mirror workflow's own dispatch
+  # trigger. Still computes and publishes the next version fresh, same as a
+  # real push would.
+  workflow_dispatch: {}
 
 permissions:
   contents: read
