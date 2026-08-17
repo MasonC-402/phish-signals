@@ -19,6 +19,14 @@ permissions:
   # needed for it beyond this permission.
   id-token: write
 
+# Every push here is a real, irreversible release (see below) — queue
+# overlapping runs instead of cancelling them, so each one's "what's the
+# latest published version" check reflects the previous run's publish rather
+# than racing it and computing the same next version twice.
+concurrency:
+  group: publish-npm
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -41,29 +49,30 @@ jobs:
       - name: Run tests
         run: npm test
 
-      # The mirror runs on *every* change under packages/phish-signals/, most
-      # of which won't be a version bump — publishing is gated on the version
-      # in package.json not already existing on the registry, so an ordinary
-      # content-only sync is a clean no-op here instead of a failed run.
-      - name: Check whether this version is already published
-        id: check
+      # Every push to this repo's main is meant to ship a release — the
+      # version in package.json is just a starting point (set once, at
+      # extraction) and is never bumped by hand from here on. The public repo
+      # is a one-way mirror that gets wholesale-overwritten by the next sync
+      # from the private source repo regardless of anything committed here,
+      # so a version bump can't be persisted back to package.json the normal
+      # way (npm version + git push) — it has to be derived fresh from
+      # whatever's actually live on the registry, every run.
+      - name: Compute the next version
+        id: version
         run: |
           NAME=$(node -p "require('./package.json').name")
-          VERSION=$(node -p "require('./package.json').version")
-          echo "name=$NAME" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
-            echo "already_published=true" >> "$GITHUB_OUTPUT"
+          LATEST=$(npm view "$NAME" version 2>/dev/null || true)
+          if [ -z "$LATEST" ]; then
+            # Never published before — first release uses package.json's own version as-is.
+            NEXT=$(node -p "require('./package.json').version")
           else
-            echo "already_published=false" >> "$GITHUB_OUTPUT"
+            NEXT=$(node -e "const [maj,min,pat]=process.argv[1].split('.').map(Number); console.log(\`\${maj}.\${min}.\${pat+1}\`)" "$LATEST")
           fi
+          echo "Latest on npm: ${LATEST:-none yet}. Publishing: $NEXT"
+          npm version "$NEXT" --no-git-tag-version --allow-same-version
+          echo "version=$NEXT" >> "$GITHUB_OUTPUT"
 
       - name: Publish to npm
-        if: steps.check.outputs.already_published == 'false'
         run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Skip (already published)
-        if: steps.check.outputs.already_published == 'true'
-        run: echo "${{ steps.check.outputs.name }}@${{ steps.check.outputs.version }} is already on npm — bump the version in package.json to publish a new release."
