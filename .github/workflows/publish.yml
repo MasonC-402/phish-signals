@@ -18,12 +18,14 @@ on:
   workflow_dispatch: {}
 
 permissions:
-  contents: read
-  # The same permission does double duty here: it's what lets npm's trusted
-  # publishing exchange a short-lived OIDC token for a publish credential
-  # (no NPM_TOKEN secret needed at all — see the Publish step below) *and*
-  # what enables provenance (a cryptographic attestation that this exact
-  # workflow run built and published the package).
+  # write, not read: the last step below commits the just-published version
+  # back to this repo (see its own comment for why that's not optional polish).
+  contents: write
+  # The same id-token permission does double duty: it's what lets npm's
+  # trusted publishing exchange a short-lived OIDC token for a publish
+  # credential (no NPM_TOKEN secret needed at all — see the Publish step
+  # below) *and* what enables provenance (a cryptographic attestation that
+  # this exact workflow run built and published the package).
   id-token: write
 
 # Every push here is a real, irreversible release (see below) — queue
@@ -67,12 +69,13 @@ jobs:
 
       # Every push to this repo's main is meant to ship a release — the
       # version in package.json is just a starting point (set once, at
-      # extraction) and is never bumped by hand from here on. The public repo
-      # is a one-way mirror that gets wholesale-overwritten by the next sync
-      # from the private source repo regardless of anything committed here,
-      # so a version bump can't be persisted back to package.json the normal
-      # way (npm version + git push) — it has to be derived fresh from
-      # whatever's actually live on the registry, every run.
+      # extraction) and is never bumped by hand. The next version is derived
+      # fresh from whatever's actually live on the registry, every run, rather
+      # than incremented off package.json's own value — the private source
+      # repo's copy of package.json never changes, so the next section of
+      # this workflow (after publishing) commits the real, just-published
+      # version back here rather than leaving this checkout's local bump
+      # (from `npm version` below) undone the moment this job ends.
       - name: Compute the next version
         id: version
         run: |
@@ -95,3 +98,30 @@ jobs:
       # permission provides for a short-lived publish credential automatically.
       - name: Publish to npm
         run: npm publish --access public --provenance
+
+      # Without this, package.json in this repo permanently shows whatever
+      # static version it had at extraction time (0.1.0), forever diverging
+      # from whatever's actually live on npm — exactly the confusing state
+      # this repo was actually caught in once already. `[skip ci]` in the
+      # message is load-bearing, not decoration: this step's own push is a
+      # push to this repo's main, which this workflow triggers on — without
+      # it, this commit would re-trigger this same workflow, compute another
+      # next version, publish *that*, commit *that* back, and loop forever.
+      # A future mirror sync from the private source repo will still
+      # overwrite this back to the stale value until the next publish
+      # corrects it again — an unavoidable side effect of the public repo
+      # being a one-way mirror, not a bug in this step.
+      - name: Commit the published version back to this repo
+        run: |
+          if git diff --quiet -- package.json; then
+            echo "package.json already matches ${{ steps.version.outputs.version }}, nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git commit -m "Bump published version to ${{ steps.version.outputs.version }} [skip ci]"
+          # HEAD:main explicitly, not a bare `git push` — actions/checkout
+          # doesn't guarantee an upstream-tracking branch is set up, and this
+          # avoids depending on that.
+          git push origin HEAD:main
