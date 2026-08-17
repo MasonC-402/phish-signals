@@ -14,9 +14,11 @@ on:
 
 permissions:
   contents: read
-  # Enables npm provenance (cryptographic attestation that this exact
-  # workflow run built and published the package) via OIDC — no extra secret
-  # needed for it beyond this permission.
+  # The same permission does double duty here: it's what lets npm's trusted
+  # publishing exchange a short-lived OIDC token for a publish credential
+  # (no NPM_TOKEN secret needed at all — see the Publish step below) *and*
+  # what enables provenance (a cryptographic attestation that this exact
+  # workflow run built and published the package).
   id-token: write
 
 # Every push here is a real, irreversible release (see below) — queue
@@ -39,6 +41,15 @@ jobs:
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
+
+      # Trusted publishing needs a recent npm CLI (11.5.0+) — the version
+      # bundled with actions/setup-node's Node 24 image tracks whatever
+      # shipped with Node at the time that runner image was built, which can
+      # lag behind. Pinning this explicitly rather than trusting the bundled
+      # version avoids a silent fallback to token-based auth (which would
+      # then fail outright, since there's no NPM_TOKEN configured anymore).
+      - name: Update npm for trusted publishing support
+        run: npm install -g npm@latest
 
       # No package-lock.json is published here (this is a workspace member
       # in the source repo, where the lockfile lives at the workspace root) —
@@ -72,7 +83,10 @@ jobs:
           npm version "$NEXT" --no-git-tag-version --allow-same-version
           echo "version=$NEXT" >> "$GITHUB_OUTPUT"
 
+      # No NODE_AUTH_TOKEN / NPM_TOKEN secret — trusted publishing
+      # (configured on npmjs.com's package settings, not in this repo) maps
+      # this exact GitHub org/repo/workflow-file combination to permission to
+      # publish, and npm exchanges the OIDC token this job's id-token: write
+      # permission provides for a short-lived publish credential automatically.
       - name: Publish to npm
         run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
