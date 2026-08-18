@@ -9,6 +9,7 @@ import { scoreSignals, assessConfidence } from './signals';
 import { extractIocs } from './iocs';
 import { mapTechniques } from './mitre';
 import { buildSigmaRule } from './sigmaRule';
+import { buildKqlQuery } from './kqlQuery';
 import { buildRecommendations } from './recommendations';
 import { registrableDomain } from './domains';
 import type {
@@ -81,6 +82,15 @@ function combineResults(input: AnalysisInput): CombinedResult {
   const senderDomain = domainOf(parsed.from);
   const replyToDomain = domainOf(parsed.replyTo);
 
+  const iocs = extractIocs({
+    urls: input.urls,
+    attachments: parsed.attachments,
+    chain,
+    from: parsed.from,
+    replyTo: parsed.replyTo,
+    returnPath: parsed.returnPath,
+  });
+
   return {
     score: scored.score,
     verdict: scored.verdict,
@@ -95,14 +105,7 @@ function combineResults(input: AnalysisInput): CombinedResult {
       authAvailable: auth.available,
     }),
     mitre: mapTechniques(scored.signals),
-    iocs: extractIocs({
-      urls: input.urls,
-      attachments: parsed.attachments,
-      chain,
-      from: parsed.from,
-      replyTo: parsed.replyTo,
-      returnPath: parsed.returnPath,
-    }),
+    iocs,
     sigmaRule: buildSigmaRule({
       subject: parsed.subject,
       senderDomain,
@@ -113,6 +116,7 @@ function combineResults(input: AnalysisInput): CombinedResult {
       verdict: scored.verdict,
       score: scored.score,
     }),
+    kqlQuery: buildKqlQuery(iocs),
     authAvailable: auth.available,
     authPassed: auth.passed,
     receivedChain: chain,

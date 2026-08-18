@@ -209,6 +209,7 @@ export interface CombinedResult {
   mitre: MitreTechnique[];
   iocs: Ioc[];
   sigmaRule: string;
+  kqlQuery: string;
   authAvailable: boolean;
   authPassed: boolean;
   receivedChain?: ReceivedChainAnalysis | null;

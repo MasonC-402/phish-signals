@@ -26,8 +26,15 @@ function defang(value: string): string {
 // something that needs live values (a search bar, a blocklist import). Order
 // matters: the bracketed dot has to be restored before the scheme, otherwise
 // "hxxp[://]" would collapse its own brackets into the wrong thing first.
+//
+// Also accepts hxxp[://] — bracketed around the colon-slash-slash rather
+// than just the scheme letters — even though defang() above never produces
+// that form itself. It's a common convention from other tools (VirusTotal,
+// MISP-style exports, plenty of SOC tickets), and refanging it costs nothing
+// extra: the pattern simply never matches text that doesn't contain it.
 function refang(value: string): string {
   return value
+    .replace(/\[:\/\/\]/gi, '://')
     .replace(/\[\.\]/gi, '.')
     .replace(/\[@\]/gi, '@')
     .replace(/^hxxp/i, 'http');
@@ -99,4 +106,89 @@ function extractIocs(sources: IocSources): Ioc[] {
   return iocs;
 }
 
-export { extractIocs, defang, refang };
+// Freeform IOC parsing, for /tools/kql-builder — pasted indicators that
+// don't come from an analyzed email at all, so there's no UrlAnalysis or
+// AttachmentSummary to read structure from, just raw text. Every token is
+// refang()ed first so a paste straight out of this site's own IOC Defang
+// tool (or any SOC ticket) classifies the same as a live value would.
+
+const HASH_PATTERN = /^[a-f0-9]{32}$|^[a-f0-9]{40}$|^[a-f0-9]{64}$/i;
+const EMAIL_PATTERN = /^[\w.+-]+@[\w-]+(\.[\w-]+)+$/i;
+const IPV4_PATTERN = /^\d{1,3}(\.\d{1,3}){3}$/;
+const IPV6_PATTERN = /^[a-f0-9:]{2,}$/i;
+// Extensions worth recognizing as "this token is a filename," not a
+// hostname — broader than attachmentCheck.ts's dangerous-extension sets,
+// since this just needs to identify a filename, not judge its risk.
+// Deliberately excludes '.com' — a real legacy DOS executable extension, but
+// negligible next to how overwhelmingly it means the TLD in any pasted text.
+// '.zip' and '.one' are both real, if rare, gTLDs too (a lookalike ".zip"
+// domain is itself a known phishing trick), so a bare "example.zip" pasted
+// with no path still reads as a filename here — an accepted residual
+// ambiguity, not a gap worth a heavier disambiguation pass for two rare
+// TLDs.
+const FILENAME_EXTENSIONS = new Set([
+  '.exe', '.dll', '.scr', '.bat', '.cmd', '.pif', '.vbs', '.vbe',
+  '.js', '.jse', '.wsf', '.wsh', '.msi', '.msp', '.ps1', '.psm1', '.jar',
+  '.hta', '.cpl', '.reg', '.lnk', '.iso', '.docm', '.xlsm', '.pptm',
+  '.dotm', '.xltm', '.potm', '.xlam', '.xlsb', '.doc', '.docx', '.xls',
+  '.xlsx', '.ppt', '.pptx', '.pdf', '.zip', '.rar', '.7z', '.rtf', '.one',
+]);
+// A domain needs a plausible alphabetic TLD — this alone is what keeps
+// "invoice.exe" from being misread as a two-label hostname once the
+// filename check above has already had first refusal at it.
+const DOMAIN_PATTERN = /^(?!\d+$)[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*\.[a-z]{2,}$/i;
+
+function isValidIpv4(host: string): boolean {
+  return IPV4_PATTERN.test(host) && host.split('.').every((octet) => Number(octet) <= 255);
+}
+
+function classifyToken(rawToken: string): Ioc | null {
+  // Surrounding punctuation a paste commonly carries along: brackets,
+  // angle brackets, trailing sentence punctuation.
+  const token = refang(rawToken).replace(/^[[<(]+|[\]>),.;:!?]+$/g, '').trim();
+  if (!token) return null;
+
+  if (HASH_PATTERN.test(token)) return ioc('hash', token.toLowerCase());
+  if (EMAIL_PATTERN.test(token)) return ioc('email', token.toLowerCase());
+
+  if (/^https?:\/\//i.test(token)) return ioc('url', token);
+
+  const hostAndPath = token.match(/^([a-z0-9.-]+)(\/\S*)$/i);
+  if (hostAndPath && DOMAIN_PATTERN.test(hostAndPath[1]) && !FILENAME_EXTENSIONS.has(extnameOf(hostAndPath[1]))) {
+    return ioc('url', `http://${token}`);
+  }
+
+  if (isValidIpv4(token)) return ioc('ip', token);
+  if (token.includes(':') && IPV6_PATTERN.test(token) && token.split(':').length > 2) return ioc('ip', token.toLowerCase());
+
+  const extension = extnameOf(token);
+  if (extension && FILENAME_EXTENSIONS.has(extension) && !token.includes('/')) return ioc('filename', token);
+
+  if (DOMAIN_PATTERN.test(token)) return ioc('domain', token.toLowerCase());
+
+  return null;
+}
+
+function extnameOf(value: string): string {
+  const match = value.toLowerCase().match(/\.[a-z0-9]+$/);
+  return match ? match[0] : '';
+}
+
+/** Parses freeform pasted text (any mix of live or defanged IOCs, any separator) into a de-duplicated Ioc[]. */
+function parseIocText(text: string): Ioc[] {
+  const iocs: Ioc[] = [];
+  const seen = new Set<string>();
+
+  for (const rawToken of text.split(/[\s,;|]+/)) {
+    const candidate = classifyToken(rawToken);
+    if (!candidate) continue;
+    const key = `${candidate.type}:${candidate.value}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    iocs.push(candidate);
+  }
+
+  return iocs;
+}
+
+export { extractIocs, defang, refang, parseIocText };

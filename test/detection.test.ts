@@ -575,6 +575,7 @@ function minimalResult(): CombinedResult {
     mitre: [],
     iocs: [{ type: 'domain', value: 'evil.tk', defanged: 'evil[.]tk' }],
     sigmaRule: 'title: x\n',
+    kqlQuery: 'union isfuzzy=true\n',
     authAvailable: true,
     authPassed: false,
   };

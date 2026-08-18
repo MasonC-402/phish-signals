@@ -34,9 +34,10 @@ export type { ZipListResult } from './zipCheck';
 // Scoring, aggregation, and output formatting.
 export { scoreSignals, assessConfidence, SEVERITY_POINTS, SEVERITY_RANK, MAX_CATEGORY_SCORE, CORROBORATION_RATE } from './signals';
 export type { ScoredEvidence } from './signals';
-export { extractIocs, defang, refang } from './iocs';
+export { extractIocs, defang, refang, parseIocText } from './iocs';
 export { buildRecommendations } from './recommendations';
 export { buildSigmaRule, subjectKeywords } from './sigmaRule';
+export { buildKqlQuery } from './kqlQuery';
 export { buildJsonExport } from './jsonExport';
 export { combineResults } from './combineResults';
 export type { AnalysisInput } from './combineResults';
