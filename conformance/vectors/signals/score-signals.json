@@ -1,0 +1,140 @@
+{
+  "module": "signals",
+  "function": "scoreSignals",
+  "cases": [
+    {
+      "name": "empty input",
+      "input": [],
+      "expect": { "score": 0, "verdict": "Low Risk", "categories": [], "signals": [], "benignSignals": [] }
+    },
+    {
+      "name": "single benign signal, nothing suspicious — benign adjustment applies but score floors at 0, not negative",
+      "input": [
+        {
+          "id": "no_links_present",
+          "category": "payload",
+          "severity": "info",
+          "benign": true,
+          "label": "No Links in the Message",
+          "detail": "The message contains no links at all, so there is nothing to click. It could still be a reply-to-me fraud attempt, which the social-engineering checks cover."
+        }
+      ],
+      "expect": {
+        "score": 0,
+        "verdict": "Low Risk",
+        "categories": [],
+        "signals": [],
+        "benignSignals": [
+          {
+            "id": "no_links_present",
+            "category": "payload",
+            "severity": "info",
+            "benign": true,
+            "label": "No Links in the Message",
+            "detail": "The message contains no links at all, so there is nothing to click. It could still be a reply-to-me fraud attempt, which the social-engineering checks cover."
+          }
+        ]
+      }
+    },
+    {
+      "name": "two authentication signals corroborate within their category (25% rate) while a payload signal scores independently on its own axis; a severity tie at the top level breaks alphabetically by label (DMARC Failure before High-Risk Links)",
+      "input": [
+        {
+          "id": "dmarc_fail",
+          "category": "authentication",
+          "severity": "high",
+          "label": "DMARC Failure",
+          "detail": "The message failed DMARC. It is not authorized by the domain it claims to come from — the strongest single indicator of sender spoofing available from headers alone.",
+          "mitre": ["T1656"]
+        },
+        {
+          "id": "spf_fail",
+          "category": "authentication",
+          "severity": "medium",
+          "label": "SPF Failure",
+          "detail": "The sending server is not on the list of servers authorized to send for this domain.",
+          "mitre": ["T1656"]
+        },
+        {
+          "id": "malicious_links",
+          "category": "payload",
+          "severity": "high",
+          "label": "High-Risk Links",
+          "detail": "1 link showed strong structural red flags (evil.tk). See the Links table for the specific reason on each.",
+          "mitre": ["T1566.002", "T1204.001"]
+        }
+      ],
+      "expect": {
+        "score": 60,
+        "verdict": "High Risk",
+        "categories": [
+          {
+            "category": "authentication",
+            "label": "Authentication",
+            "score": 32,
+            "signals": [
+              {
+                "id": "dmarc_fail",
+                "category": "authentication",
+                "severity": "high",
+                "label": "DMARC Failure",
+                "detail": "The message failed DMARC. It is not authorized by the domain it claims to come from — the strongest single indicator of sender spoofing available from headers alone.",
+                "mitre": ["T1656"]
+              },
+              {
+                "id": "spf_fail",
+                "category": "authentication",
+                "severity": "medium",
+                "label": "SPF Failure",
+                "detail": "The sending server is not on the list of servers authorized to send for this domain.",
+                "mitre": ["T1656"]
+              }
+            ]
+          },
+          {
+            "category": "payload",
+            "label": "Links & Attachments",
+            "score": 28,
+            "signals": [
+              {
+                "id": "malicious_links",
+                "category": "payload",
+                "severity": "high",
+                "label": "High-Risk Links",
+                "detail": "1 link showed strong structural red flags (evil.tk). See the Links table for the specific reason on each.",
+                "mitre": ["T1566.002", "T1204.001"]
+              }
+            ]
+          }
+        ],
+        "signals": [
+          {
+            "id": "dmarc_fail",
+            "category": "authentication",
+            "severity": "high",
+            "label": "DMARC Failure",
+            "detail": "The message failed DMARC. It is not authorized by the domain it claims to come from — the strongest single indicator of sender spoofing available from headers alone.",
+            "mitre": ["T1656"]
+          },
+          {
+            "id": "malicious_links",
+            "category": "payload",
+            "severity": "high",
+            "label": "High-Risk Links",
+            "detail": "1 link showed strong structural red flags (evil.tk). See the Links table for the specific reason on each.",
+            "mitre": ["T1566.002", "T1204.001"]
+          },
+          {
+            "id": "spf_fail",
+            "category": "authentication",
+            "severity": "medium",
+            "label": "SPF Failure",
+            "detail": "The sending server is not on the list of servers authorized to send for this domain.",
+            "mitre": ["T1656"]
+          }
+        ],
+        "benignSignals": []
+      }
+    }
+  ]
+}

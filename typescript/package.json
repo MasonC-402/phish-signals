@@ -21,7 +21,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MasonC-402/phish-signals.git"
+    "url": "git+https://github.com/MasonC-402/phish-signals.git",
+    "directory": "typescript"
   },
   "publishConfig": {
     "access": "public"

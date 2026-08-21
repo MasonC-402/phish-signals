@@ -1,0 +1,14 @@
+{
+  "module": "iocs",
+  "function": "defang",
+  "cases": [
+    {
+      "name": "scheme and dots defanged; :// is left alone (defang never brackets it, only refang optionally accepts that form)",
+      "input": "http://evil.tk/login",
+      "expect": "hxxp://evil[.]tk/login"
+    },
+    { "name": "https and query string", "input": "https://sub.example.com/path?a=1", "expect": "hxxps://sub[.]example[.]com/path?a=1" },
+    { "name": "email address, @ defanged too", "input": "attacker@evil.tk", "expect": "attacker[@]evil[.]tk" },
+    { "name": "bare IP, every dot bracketed", "input": "192.168.1.1", "expect": "192[.]168[.]1[.]1" }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "module": "punycode",
+  "function": "decodeHostname",
+  "cases": [
+    {
+      "name": "homograph: Cyrillic а hidden in an otherwise-Latin paypal lookalike",
+      "input": "xn--pypal-4ve.com",
+      "expect": "pаypal.com"
+    },
+    { "name": "ordinary ASCII hostname, nothing to decode", "input": "example.com", "expect": null },
+    {
+      "name": "genuinely Cyrillic IDN (тест.рф), both labels punycode-encoded",
+      "input": "xn--e1aybc.xn--p1ai",
+      "expect": "тест.рф"
+    }
+  ]
+}

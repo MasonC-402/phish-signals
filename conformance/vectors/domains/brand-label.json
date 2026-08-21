@@ -1,0 +1,8 @@
+{
+  "module": "domains",
+  "function": "brandLabel",
+  "cases": [
+    { "name": "single-word brand", "input": "paypal.com", "expect": "paypal" },
+    { "name": "compound brand name", "input": "bankofamerica.com", "expect": "bankofamerica" }
+  ]
+}

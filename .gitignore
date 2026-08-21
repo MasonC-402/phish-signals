@@ -1,11 +1,6 @@
 node_modules/
-npm-debug.log*
 .DS_Store
 
-# Compiled output from the TypeScript sources. tsconfig.json builds src/*.ts to
-# dist/ (with declarations) for publishing, and a separate tsconfig.test.json
-# compiles src/**/*.ts + test/**/*.ts in place (no outDir) so `node --test` can
-# run test/*.js directly. Both are built on demand, never checked in.
-/dist/
-/src/*.js
-/test/*.js
+# Per-language build/dependency artifacts live in each language's own
+# .gitignore (typescript/.gitignore, python/.gitignore), scoped relative to
+# that directory. Only patterns meaningful repo-wide belong here.

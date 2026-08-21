@@ -1,0 +1,13 @@
+{
+  "module": "iocs",
+  "function": "refang",
+  "cases": [
+    {
+      "name": "bracketed :// form (a convention from other tools, never produced by this package's own defang)",
+      "input": "hxxp[://]evil[.]tk/login",
+      "expect": "http://evil.tk/login"
+    },
+    { "name": "unbracketed :// with bracketed dots, this package's own defang output", "input": "hxxps://sub[.]example[.]com", "expect": "https://sub.example.com" },
+    { "name": "email address", "input": "attacker[@]evil[.]tk", "expect": "attacker@evil.tk" }
+  ]
+}

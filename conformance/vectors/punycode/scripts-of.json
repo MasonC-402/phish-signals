@@ -1,0 +1,12 @@
+{
+  "module": "punycode",
+  "function": "scriptsOf",
+  "cases": [
+    { "name": "pure Latin", "input": "paypal", "expect": ["Latin"] },
+    {
+      "name": "mixed script — a single Cyrillic а substituted into an otherwise-Latin word",
+      "input": "pаypal",
+      "expect": ["Latin", "Cyrillic"]
+    }
+  ]
+}

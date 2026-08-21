@@ -1,0 +1,15 @@
+{
+  "module": "domains",
+  "function": "registrableDomain",
+  "cases": [
+    { "name": "subdomain reduces to registrable domain", "input": "mail.example.com", "expect": "example.com" },
+    { "name": "already registrable, unchanged", "input": "example.co.uk", "expect": "example.co.uk" },
+    { "name": "multi-part suffix collapses subdomain correctly", "input": "mail.example.co.uk", "expect": "example.co.uk" },
+    { "name": "bare TLD, too few labels to reduce", "input": "com", "expect": "com" },
+    {
+      "name": "IP literal is not a domain but the function has no way to know that — documents the real, un-idealized behavior",
+      "input": "192.168.1.1",
+      "expect": "1.1"
+    }
+  ]
+}

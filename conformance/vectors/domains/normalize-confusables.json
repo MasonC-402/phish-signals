@@ -1,0 +1,14 @@
+{
+  "module": "domains",
+  "function": "normalizeConfusables",
+  "cases": [
+    { "name": "digit-1 to l", "input": "paypa1.com", "expect": "paypal.com" },
+    { "name": "rn to m", "input": "rnicrosoft.com", "expect": "microsoft.com" },
+    { "name": "digit-0 to o", "input": "arnaz0n.com", "expect": "amazon.com" },
+    {
+      "name": "digit-1 maps to l, not i — so this does NOT normalize to netflix.com. A real quirk of the substitution table, not a bug to silently fix in a port.",
+      "input": "netfl1x.com",
+      "expect": "netfllx.com"
+    }
+  ]
+}
