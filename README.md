@@ -13,16 +13,17 @@ Extracted from [farksecurity.com's phish-report tool](https://farksecurity.com/p
 | Implementation | Status |
 | --------------- | ------ |
 | [`typescript/`](typescript/) | Published — `npm install @farksecurity/phish-signals` |
-| [`python/`](python/) | Not started |
+| [`python/`](python/) | Scaffolded, not yet implemented |
 
 The two are independent implementations of the same detection logic, not a
 core-plus-binding — each is a complete, standalone package you can install and
 use on its own. They are expected to agree on *what* a given input is: the
 same signal ids, categories, and severities for the same input. They are not
 expected to version in lockstep, and each ships its own release process:
-`.github/workflows/publish.yml` builds and tags npm releases as `npm-v*`; a
-`publish-pypi.yml` tagged `pypi-v*` will do the same for PyPI once the Python
-side exists.
+`.github/workflows/publish.yml` builds and tags npm releases as `npm-v*`,
+`publish-pypi.yml` does the same for PyPI as `pypi-v*`. The PyPI workflow
+exists but is dormant until a trusted publisher is configured on PyPI's side
+(see that file's comment) and there's an actual release to cut.
 
 ## Conformance
 

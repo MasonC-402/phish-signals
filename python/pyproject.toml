@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "phish-signals"
+version = "0.1.0"
+description = "Heuristic phishing-detection engine: URL/domain typosquat and homograph checks, SPF/DKIM/DMARC-aware header analysis, Received-chain spoofing checks, IOC defang/refang, MITRE ATT&CK mapping, Sigma rule generation, and parsing for raw .eml/.msg messages plus embedded QR codes."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+# Independent Python implementation of the same detection engine published to
+# npm as @farksecurity/phish-signals (../typescript). Not a binding — see
+# ../conformance/ for what keeps the two in agreement on what a given input
+# means.
+dependencies = []
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Security",
+]
+keywords = [
+    "phishing",
+    "security",
+    "detection",
+    "email-security",
+    "typosquatting",
+    "homograph",
+    "punycode",
+    "mitre-attack",
+    "sigma",
+    "eml",
+    "msg",
+    "outlook",
+    "qr-code",
+]
+
+[project.urls]
+Homepage = "https://github.com/MasonC-402/phish-signals"
+Repository = "https://github.com/MasonC-402/phish-signals"
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/phish_signals"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

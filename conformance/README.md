@@ -66,10 +66,18 @@ normal test run — there's no separate command.
 - **TypeScript**: `typescript/test/conformance.test.ts`, run via `npm test`
   from `typescript/`. Reads every `vectors/**/*.json` file, dispatches by
   `module`/`function` to the matching export from `typescript/src/`, and
-  fails the specific case (not the whole file) on a mismatch.
-- **Python**: not wired up yet — see `python/README.md`. It should follow
-  the same shape: read the same JSON files unmodified, dispatch to the
-  matching function, assert equality.
+  fails the specific case (not the whole file) on a mismatch. Every vector
+  here already has a matching TS export — a missing one is a real bug, so
+  the harness fails hard rather than skipping.
+- **Python**: `python/tests/test_conformance.py`, run via `pytest` from
+  `python/` (see `python/README.md` for setup). Reads the same files,
+  converts each vector's camelCase `function` name to snake_case
+  (`registrableDomain` → `registrable_domain`) to find it under
+  `phish_signals.<module>`. Unlike the TypeScript side, a vector whose
+  module or function doesn't exist yet is **skipped, not failed** — the
+  Python port is in progress, and "not implemented yet" isn't the same
+  failure as "implemented and wrong." A vector whose function exists but
+  returns the wrong value still fails normally.
 
 ## Coverage
 

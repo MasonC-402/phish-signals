@@ -1,0 +1,93 @@
+name: Publish to PyPI
+
+# Mirrors typescript/'s .github/workflows/publish.yml: releases are cut by
+# tag, not by every push. Bump "version" in python/pyproject.toml, commit,
+# push a matching pypi-vX.Y.Z tag. The pypi- prefix (as opposed to npm's
+# bare npm-v) keeps the two release pipelines from ever triggering each
+# other, since both live in this same repo.
+#
+# This workflow will not succeed until PyPI's trusted publisher is
+# configured for this project: pypi.org -> phish-signals package settings
+# (or, for the very first release, the "pending publisher" flow, since the
+# project won't exist on PyPI yet) -> add a GitHub publisher for
+# MasonC-402/phish-signals, workflow publish-pypi.yml. No API token is
+# stored here or needed — same OIDC trusted-publishing model as npm.
+on:
+  push:
+    tags:
+      - 'pypi-v*'
+  # Retries a failed publish without having to move or re-cut the tag. Run it
+  # from the tag you meant to publish — it reads the version out of
+  # pyproject.toml at whatever ref it's dispatched on.
+  workflow_dispatch: {}
+
+permissions:
+  # read, not write: nothing commits back to this repo.
+  contents: read
+  # What lets PyPI's trusted publishing exchange a short-lived OIDC token for
+  # a publish credential — no API token secret at all.
+  id-token: write
+
+# Publishing is irreversible — a version, once taken on PyPI, is taken for
+# good. Queue overlapping runs rather than cancelling them, so a retry never
+# races the run it was meant to replace.
+concurrency:
+  group: publish-pypi
+  cancel-in-progress: false
+
+# Everything in this job operates on the python/ package specifically — the
+# TypeScript package under typescript/ has its own publish.yml and its own
+# tag prefix, so the two never step on each other.
+defaults:
+  run:
+    working-directory: python
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install build and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+          pip install -e ".[test]"
+
+      - name: Run tests
+        run: pytest
+
+      # Catches tagging pypi-v0.2.0 while pyproject.toml still says 0.1.0 —
+      # same guard as the npm workflow's equivalent step, same reasoning.
+      # Skipped when dispatched from a non-tag ref, where there's no tag to
+      # compare against.
+      - name: Verify the tag matches pyproject.toml
+        if: github.ref_type == 'tag'
+        run: |
+          TAG="${GITHUB_REF_NAME#pypi-v}"
+          PKG=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          if [ "$TAG" != "$PKG" ]; then
+            echo "Tag ${GITHUB_REF_NAME} implies version $TAG, but pyproject.toml says $PKG." >&2
+            echo "Bump pyproject.toml and re-cut the tag so the two agree." >&2
+            exit 1
+          fi
+          echo "Tag and pyproject.toml agree on $PKG."
+
+      - name: Build sdist and wheel
+        run: python -m build
+
+      # No API token — trusted publishing (configured on pypi.org's project
+      # settings, not in this repo) maps this exact org/repo/workflow-file
+      # combination to permission to publish, and PyPI exchanges the OIDC
+      # token this job's id-token: write permission provides for a
+      # short-lived publish credential automatically.
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: python/dist
