@@ -1,9 +1,9 @@
 name: Publish to PyPI
 
 # Mirrors typescript/'s .github/workflows/publish.yml: releases are cut by
-# tag, not by every push. Bump "version" in python/pyproject.toml, commit,
-# push a matching pypi-vX.Y.Z tag. The pypi- prefix (as opposed to npm's
-# bare npm-v) keeps the two release pipelines from ever triggering each
+# tag, not by every push. Bump "version" in py-phish-signals/pyproject.toml,
+# commit, push a matching pypi-vX.Y.Z tag. The pypi- prefix (as opposed to
+# npm's bare npm-v) keeps the two release pipelines from ever triggering each
 # other, since both live in this same repo.
 #
 # This workflow will not succeed until PyPI's trusted publisher is
@@ -35,12 +35,12 @@ concurrency:
   group: publish-pypi
   cancel-in-progress: false
 
-# Everything in this job operates on the python/ package specifically — the
-# TypeScript package under typescript/ has its own publish.yml and its own
-# tag prefix, so the two never step on each other.
+# Everything in this job operates on the py-phish-signals/ package
+# specifically — the TypeScript package under typescript/ has its own
+# publish.yml and its own tag prefix, so the two never step on each other.
 defaults:
   run:
-    working-directory: python
+    working-directory: py-phish-signals
 
 jobs:
   publish:
@@ -49,19 +49,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      # working-directory (an input this action defines itself — separate
+      # from the job-level `defaults.run.working-directory` below, which
+      # only applies to `run:` steps, not `uses:` steps like this one) scopes
+      # its dependency-cache glob to py-phish-signals/pyproject.toml and
+      # uv.lock. It doesn't need to be told the Python version explicitly:
+      # every `uv` invocation below reads .python-version from its own
+      # working directory automatically.
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.1
         with:
-          python-version: '3.12'
+          working-directory: py-phish-signals
 
-      - name: Install build and test dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install build
-          pip install -e ".[test]"
+      - name: Install dependencies
+        run: uv sync --locked
 
       - name: Run tests
-        run: pytest
+        run: uv run pytest
 
       # Catches tagging pypi-v0.2.0 while pyproject.toml still says 0.1.0 —
       # same guard as the npm workflow's equivalent step, same reasoning.
@@ -71,7 +75,7 @@ jobs:
         if: github.ref_type == 'tag'
         run: |
           TAG="${GITHUB_REF_NAME#pypi-v}"
-          PKG=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          PKG=$(uv run python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
           if [ "$TAG" != "$PKG" ]; then
             echo "Tag ${GITHUB_REF_NAME} implies version $TAG, but pyproject.toml says $PKG." >&2
             echo "Bump pyproject.toml and re-cut the tag so the two agree." >&2
@@ -80,7 +84,7 @@ jobs:
           echo "Tag and pyproject.toml agree on $PKG."
 
       - name: Build sdist and wheel
-        run: python -m build
+        run: uv build
 
       # No API token — trusted publishing (configured on pypi.org's project
       # settings, not in this repo) maps this exact org/repo/workflow-file
@@ -90,4 +94,4 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: python/dist
+          packages-dir: py-phish-signals/dist

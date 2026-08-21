@@ -13,7 +13,7 @@ Extracted from [farksecurity.com's phish-report tool](https://farksecurity.com/p
 | Implementation | Status |
 | --------------- | ------ |
 | [`typescript/`](typescript/) | Published — `npm install @farksecurity/phish-signals` |
-| [`python/`](python/) | Scaffolded, not yet implemented |
+| [`py-phish-signals/`](py-phish-signals/) | Scaffolded, not yet implemented — `pip install phish-signals` once released |
 
 The two are independent implementations of the same detection logic, not a
 core-plus-binding — each is a complete, standalone package you can install and

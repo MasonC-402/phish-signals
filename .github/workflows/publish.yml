@@ -4,8 +4,8 @@ name: Publish to npm
 # typescript/package.json, commit it, then push a matching npm-vX.Y.Z tag.
 # Pushing ordinary commits to main is not a release. The npm- prefix (rather
 # than a bare v) is there because this repo also holds a Python
-# implementation under python/, released independently under its own
-# pypi-vX.Y.Z tags — the two need to never collide or trigger each other.
+# implementation under py-phish-signals/, released independently under its
+# own pypi-vX.Y.Z tags — the two need to never collide or trigger each other.
 #
 # This repo used to be a force-push mirror target, subtree-split out of a
 # private monorepo on every relevant commit. package.json could therefore never
@@ -40,9 +40,9 @@ concurrency:
   cancel-in-progress: false
 
 # Everything in this job operates on the typescript/ package specifically —
-# the Python package under python/ has its own publish-pypi.yml and its own
-# tag prefix, so the two workflows never step on each other even though they
-# live in the same repo.
+# the Python package under py-phish-signals/ has its own publish-pypi.yml
+# and its own tag prefix, so the two workflows never step on each other even
+# though they live in the same repo.
 defaults:
   run:
     working-directory: typescript

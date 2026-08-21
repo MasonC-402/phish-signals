@@ -6,6 +6,8 @@ independent Python implementation of the same detection engine as
 second implementation held to the same behavior via
 [`../conformance/`](../conformance/).
 
+Managed with [uv](https://docs.astral.sh/uv/).
+
 ## Layout
 
 Standard modern Python packaging: a [src layout](https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/)
@@ -14,28 +16,32 @@ importing from the working directory) plus [pytest](https://docs.pytest.org/)'s
 conventional `tests/` directory.
 
 ```text
-python/
+py-phish-signals/
 ├── pyproject.toml
 ├── LICENSE
+├── .python-version          # 3.12, pins the interpreter uv uses locally
 ├── src/
 │   └── phish_signals/
-│       └── __init__.py      # public API surface — mirrors typescript/src/index.ts's role
+│       ├── __init__.py      # public API surface — mirrors typescript/src/index.ts's role
+│       └── py.typed         # PEP 561 marker: this package ships inline types
 └── tests/
     └── test_conformance.py  # runs ../../conformance/vectors against whatever's implemented
 ```
 
-The PyPI distribution name is `phish-signals` (hyphenated, like the repo);
-the import name is `phish_signals` (underscored — Python import names can't
-contain hyphens). `import phish_signals`, not `import phish-signals`.
+The directory is `py-phish-signals/` (sits clearly alongside `typescript/` in
+the repo listing), but the **PyPI distribution name is the plain
+`phish-signals`** (confirmed available), so `pip install phish-signals`
+matches the repo's own name without a redundant `py-` prefix. Either way, the
+**import name is `phish_signals`** — underscored, since Python import names
+can't contain hyphens: `import phish_signals`, not `import phish-signals` or
+`import py_phish_signals`.
 
 ## Setup
 
 ```bash
-cd python
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[test]"
-pytest
+cd py-phish-signals
+uv sync                # creates .venv, installs the package + dev dependencies
+uv run pytest
 ```
 
 Right now every test in `pytest`'s output will be `SKIPPED`, not failed —
@@ -43,6 +49,9 @@ that's correct. `tests/test_conformance.py` skips a vector whose module or
 function doesn't exist yet rather than failing on it; see that file's
 docstring. As modules get implemented, their vectors flip from skip to pass
 (or fail, if the port doesn't match — that's the point).
+
+To add a runtime dependency once parsing needs one (`extract-msg`, `pyzbar`,
+...): `uv add extract-msg`. To add a dev-only one: `uv add --dev <package>`.
 
 ## Porting order
 
@@ -81,9 +90,16 @@ conformance harness converts camelCase to snake_case to find it. See
    `typescript/src/<name>.ts`'s public functions and behavior (including its
    quirks — see `../conformance/README.md`'s note on that).
 2. If `../conformance/vectors/<name>/` already has vectors (seeded from the
-   TypeScript side for the zero-dependency layer), `pytest` will pick them up
-   automatically — no wiring needed.
+   TypeScript side for the zero-dependency layer), `uv run pytest` will pick
+   them up automatically — no wiring needed.
 3. If it doesn't yet, add vectors there once both implementations exist, so
    coverage grows with the port rather than trailing behind it.
 4. Re-export the new public functions from `src/phish_signals/__init__.py`,
    same grouping as `typescript/src/index.ts`.
+
+## Publishing
+
+`.github/workflows/publish-pypi.yml` (repo root) is tag-driven: bump
+`version` in `pyproject.toml`, commit, push a matching `pypi-vX.Y.Z` tag. It
+won't succeed until a trusted publisher is configured on PyPI's side for a
+project named `phish-signals` — see that workflow file's comment.
