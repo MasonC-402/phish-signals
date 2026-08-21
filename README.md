@@ -56,11 +56,12 @@ data (a URL string, a header-lines array) from elsewhere.
 
 ## Status
 
-`0.1.0` — extracted and open-sourced from an in-production tool, but the
-package itself is new. The heuristics are actively maintained as part of
-[farkwebsite](https://github.com/MasonC-402/farkwebsite)'s phish-report tool;
-this package mirrors that logic but versions independently, so pin a version
-rather than assuming score/verdict output is stable across releases.
+Extracted and open-sourced from an in-production tool, and now developed here
+in its own right rather than synced out of another repo. The same heuristics
+also ship inside [farkwebsite](https://github.com/MasonC-402/farkwebsite)'s
+phish-report tool, but the two copies evolve independently and are not kept in
+lockstep, so pin a version rather than assuming score/verdict output is stable
+across releases.
 
 ## License
 
