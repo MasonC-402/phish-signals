@@ -12,11 +12,14 @@ things and should not both show up as the same red X. A vector whose
 function does exist but returns the wrong value still fails normally, same
 as any other assertion.
 
-Convention: vector files name functions the way the TypeScript source does
-(camelCase, e.g. "registrableDomain") since that's the reference
-implementation. This harness converts to snake_case (registrable_domain) to
-look them up here — Python modules are expected to use ordinary Python
-naming, not mirror TypeScript's.
+Convention: vector files name modules and functions the way the TypeScript
+source does (camelCase, e.g. "urlCheck" / "registrableDomain") since that's
+the reference implementation. This harness converts both to snake_case
+(phish_signals.url_check.registrable_domain) to look them up here — Python
+modules are expected to use ordinary Python naming, not mirror TypeScript's.
+Every module vectored so far happens to be a single lowercase word, where the
+conversion is the identity, so this matters first for the checks layer
+(urlCheck, authCheck, headerAnomalies, ...) as those vectors land.
 """
 
 from __future__ import annotations
@@ -54,19 +57,28 @@ def _collect_cases() -> list[pytest.param]:
     return cases
 
 
-@pytest.mark.parametrize("module_name, func_name, input_value, expected", _collect_cases())
-def test_conformance(module_name: str, func_name: str, input_value: object, expected: object) -> None:
+@pytest.mark.parametrize(
+    "module_name, func_name, input_value, expected", _collect_cases()
+)
+def test_conformance(
+    module_name: str, func_name: str, input_value: object, expected: object
+) -> None:
+    py_module_name = _camel_to_snake(module_name)
     try:
-        module = importlib.import_module(f"phish_signals.{module_name}")
+        module = importlib.import_module(f"phish_signals.{py_module_name}")
     except ImportError:
-        pytest.skip(f"phish_signals.{module_name} not ported yet")
+        pytest.skip(
+            f"phish_signals.{py_module_name} "
+            f"(conformance vector module '{module_name}') not ported yet"
+        )
 
     py_func_name = _camel_to_snake(func_name)
     func = getattr(module, py_func_name, None)
     if func is None:
         pytest.skip(
-            f"phish_signals.{module_name}.{py_func_name} "
-            f"(conformance vector name '{func_name}') not implemented yet"
+            f"phish_signals.{py_module_name}.{py_func_name} "
+            f"(conformance vector '{module_name}.{func_name}') "
+            f"not implemented yet"
         )
 
     assert func(input_value) == expected

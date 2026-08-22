@@ -5,8 +5,21 @@
   // ----- Python interpreter (uv-managed venv) -----
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
 
-  // ----- Disable Pylance / Jedi in favour of ty -----
-  "python.languageServer": "None",
+  // ----- Language server: Pylance, type checking: ty -----
+  // Pylance owns IntelliSense — hover, completions, go-to-definition,
+  // signature help. Note that this is also what the Docs View extension
+  // renders: it displays whatever hover the language server provides, so with
+  // this set to "None" that panel sits empty on Python files.
+  "python.languageServer": "Pylance",
+
+  // ...but Pylance does not own type checking. ty does (see below). Leaving
+  // Pylance's checker on would report the same problem twice under two
+  // different rule names and two different sets of ignore comments, which is
+  // worse than either checker alone. "off" keeps the IntelliSense and cedes
+  // diagnostics to ty. Pylance still surfaces syntax and unresolved-import
+  // errors at this level, which is intentional — those are cheap and it
+  // catches them before ty runs.
+  "python.analysis.typeCheckingMode": "off",
   "[python]": {
     "editor.defaultFormatter": "charliermarsh.ruff",
     "editor.formatOnSave": true,
@@ -21,7 +34,8 @@
   "ruff.lint.enable": true,
   "ruff.format.enable": true,
 
-  // ----- ty (Astral type checker, replaces Pylance) -----
+  // ----- ty (Astral type checker) -----
+  // The type checker of record, matching what CI runs (`uv run ty check src`).
   // Requires the "astral-sh.ty" extension (currently in preview).
   "ty.enable": true,
 
