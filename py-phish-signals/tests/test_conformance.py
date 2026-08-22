@@ -66,7 +66,9 @@ def test_conformance(
     py_module_name = _camel_to_snake(module_name)
     try:
         module = importlib.import_module(f"phish_signals.{py_module_name}")
-    except ImportError:
+    except ImportError as exc:
+        if exc.name != f"phish_signals.{py_module_name}":
+            raise
         pytest.skip(
             f"phish_signals.{py_module_name} "
             f"(conformance vector module '{module_name}') not ported yet"
