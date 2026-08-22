@@ -224,6 +224,81 @@ MessageInfo = TypedDict(
 )
 
 
+class SignalResult(TypedDict):
+    """Base return shape of a check — just the evidence it produced.
+
+    Checks that carry extra state alongside their signals (auth, header
+    anomalies) extend this rather than redeclaring ``signals``.
+    """
+
+    signals: list[Signal]
+
+
+class AuthCheckResult(SignalResult):
+    """Return shape of ``phish_signals.auth_check.check_authentication``."""
+
+    #: False when there were no headers to check at all (a plain-text paste).
+    available: bool
+    #: True when SPF, DKIM and DMARC were all present and passing.
+    passed: bool
+    #: The authserv-id of whichever Authentication-Results header was picked
+    #: as authoritative, or None if none survived selection. Exposed so the
+    #: header-anomaly check validates that exact same header instead of
+    #: re-deriving "the" header itself and risking disagreement about which
+    #: one is meant.
+    selectedAuthservId: str | None
+
+
+class HeaderAnomalyResult(SignalResult):
+    """Return shape of ``phish_signals.header_anomalies.check_header_anomalies``."""
+
+    messageIdDomain: str | None
+    mailer: str | None
+
+
+class HeaderLine(TypedDict):
+    """One raw header line, in original order."""
+
+    key: str
+    line: str
+
+
+# Functional syntax for the same reason as MessageInfo below: the key really
+# is spelled "from", which is a Python keyword and cannot be a class attribute.
+ParsedEmail = TypedDict(
+    "ParsedEmail",
+    {
+        "isRawEmail": bool,
+        "from": str | None,
+        "returnPath": str | None,
+        "replyTo": str | None,
+        "subject": str | None,
+        "date": str | None,
+        "headers": dict[str, object] | None,
+        # Raw header lines in original order — needed to read the Received chain.
+        "headerLines": list[HeaderLine],
+        "textBody": str,
+        "htmlBody": str | None,
+        # Subject + text part + de-tagged HTML part, i.e. everything the
+        # content heuristics should see.
+        "scanText": str,
+        "urls": list[str],
+        "linkMismatches": list[LinkMismatch],
+        # 'data' / 'javascript' / 'vbscript' — hrefs with no hostname at all,
+        # invisible to every URL-based check.
+        "dangerousSchemes": list[str],
+        "attachments": list[AttachmentSummary],
+        "imageCount": int,
+        # URLs decoded from a QR code in an embedded/attached image. Already
+        # folded into ``urls``; kept separate so a dedicated signal can name them.
+        "qrCodeUrls": list[str],
+        # How many images were actually attempted, regardless of whether any
+        # decoded to anything.
+        "qrImagesScanned": int,
+    },
+)
+
+
 class MitreTechnique(TypedDict):
     id: str
     name: str
@@ -239,22 +314,27 @@ class Recommendation(TypedDict):
 __all__ = [
     "CATEGORY_LABELS",
     "AttachmentSummary",
+    "AuthCheckResult",
     "Availability",
     "CategoryScore",
     "Confidence",
     "EvidenceCategory",
+    "HeaderAnomalyResult",
+    "HeaderLine",
     "HostnameDescription",
     "Ioc",
     "IocType",
     "LinkMismatch",
     "MessageInfo",
     "MitreTechnique",
+    "ParsedEmail",
     "ReceivedChainAnalysis",
     "ReceivedHop",
     "Recommendation",
     "ScoredEvidence",
     "Severity",
     "Signal",
+    "SignalResult",
     "UrlAnalysis",
     "UrlRisk",
     "Verdict",

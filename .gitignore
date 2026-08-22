@@ -1,6 +1,6 @@
 node_modules/
 .DS_Store
-
+.claude/
 # Per-language build/dependency artifacts live in each language's own
 # .gitignore (typescript/.gitignore, python/.gitignore), scoped relative to
 # that directory. Only patterns meaningful repo-wide belong here.

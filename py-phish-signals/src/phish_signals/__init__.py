@@ -9,12 +9,19 @@ This module's role is the same as ``typescript/src/index.ts``: the public API
 surface. Everything a consumer needs is re-exported from here; the submodules
 underneath are internal layout, not a contract.
 
-Ported so far — the zero-runtime-dependency layer, which is also the layer the
-conformance vectors currently cover: shared types, domain helpers, punycode
-and homograph identification, input sanitizing, scoring, and IOC handling. The
+Ported so far: shared types, domain helpers, punycode and homograph
+identification, input sanitizing, scoring, IOC handling, the rule engine, and
+content checks (urgency language, credential/financial/authority-impersonation
+phrase detection, generic greetings, display-name spoofing, excessive
+capitalization, link-text deception, dangerous link schemes). The remaining
 checks, aggregation, and parsing layers exist as documented stubs and export
 nothing yet; :data:`IMPLEMENTED_MODULES` is the machine-readable version of
 that status.
+
+The rule layer (:mod:`phish_signals.rules`) gives the detection logic a name,
+so it can be listed, disabled, replaced, or extended by consumers. The
+declarative half of it loads phrase-list rules from JSON so they are defined
+once and shared across implementations.
 
 Naming: the TypeScript source is camelCase because that is idiomatic there,
 and the conformance vectors name functions the same way since it is the
@@ -27,6 +34,15 @@ spelling is part of the contract rather than an internal style choice.
 """
 
 from __future__ import annotations
+
+# Content checks — phrase-list heuristics, display-name spoofing, link text.
+from .content_check import (
+    CONTENT_RULESET,
+    KNOWN_BRAND_NAMES,
+    check_content,
+    check_dangerous_schemes,
+    check_link_text,
+)
 
 # Registrable-domain / brand-list utilities.
 from .domains import (
@@ -46,6 +62,23 @@ from .punycode import (
     describe_hostname,
     is_whole_script_confusable,
     scripts_of,
+)
+
+# Rule layer: named detection units, custom rules, declarative rulesets.
+from .rules import (
+    Rule,
+    RuleContext,
+    RuleDiagnostic,
+    RuleError,
+    RuleInfo,
+    RuleLoadError,
+    RuleRunResult,
+    Ruleset,
+    RulesetError,
+    evaluate_ruleset,
+    load_rule_file,
+    load_ruleset,
+    parse_rule,
 )
 
 # Input handling.
@@ -70,22 +103,27 @@ from .signals import (
 from .types import (
     CATEGORY_LABELS,
     AttachmentSummary,
+    AuthCheckResult,
     Availability,
     CategoryScore,
     Confidence,
     EvidenceCategory,
+    HeaderAnomalyResult,
+    HeaderLine,
     HostnameDescription,
     Ioc,
     IocType,
     LinkMismatch,
     MessageInfo,
     MitreTechnique,
+    ParsedEmail,
     ReceivedChainAnalysis,
     ReceivedHop,
     Recommendation,
     ScoredEvidence,
     Severity,
     Signal,
+    SignalResult,
     UrlAnalysis,
     UrlRisk,
     Verdict,
@@ -98,9 +136,10 @@ __version__ = "0.1.0"
 #: a documented stub. Exposed so a caller can branch on the state of the port
 #: instead of discovering it through an ``ImportError``; it shrinks to
 #: irrelevance as the remaining modules land.
-IMPLEMENTED_MODULES: frozenset[str] = frozenset(
-    {"types", "domains", "punycode", "sanitize", "signals", "iocs"}
-)
+IMPLEMENTED_MODULES: frozenset[str] = frozenset({
+    "types", "domains", "punycode", "sanitize", "signals",
+    "iocs", "rules", "content_check",
+})
 
 __all__ = [
     # Version and port status
@@ -109,22 +148,27 @@ __all__ = [
     # Shared shapes
     "CATEGORY_LABELS",
     "AttachmentSummary",
+    "AuthCheckResult",
     "Availability",
     "CategoryScore",
     "Confidence",
     "EvidenceCategory",
+    "HeaderAnomalyResult",
+    "HeaderLine",
     "HostnameDescription",
     "Ioc",
     "IocType",
     "LinkMismatch",
     "MessageInfo",
     "MitreTechnique",
+    "ParsedEmail",
     "ReceivedChainAnalysis",
     "ReceivedHop",
     "Recommendation",
     "ScoredEvidence",
     "Severity",
     "Signal",
+    "SignalResult",
     "UrlAnalysis",
     "UrlRisk",
     "Verdict",
@@ -152,6 +196,26 @@ __all__ = [
     "SEVERITY_RANK",
     "assess_confidence",
     "score_signals",
+    # Content checks
+    "CONTENT_RULESET",
+    "KNOWN_BRAND_NAMES",
+    "check_content",
+    "check_dangerous_schemes",
+    "check_link_text",
+    # Rules
+    "Rule",
+    "RuleContext",
+    "RuleDiagnostic",
+    "RuleError",
+    "RuleInfo",
+    "RuleLoadError",
+    "RuleRunResult",
+    "Ruleset",
+    "RulesetError",
+    "evaluate_ruleset",
+    "load_rule_file",
+    "load_ruleset",
+    "parse_rule",
     # IOCs
     "defang",
     "extract_iocs",
