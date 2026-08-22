@@ -3,8 +3,7 @@
   "security.workspace.trust.enabled": true,
 
   // ----- Python interpreter (uv-managed venv) -----
-  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
-
+  // Intentionally not hardcoded: VS Code Python extension auto-detects .venv on all OSes.
   // ----- Language server: Pylance, type checking: ty -----
   // Pylance owns IntelliSense — hover, completions, go-to-definition,
   // signature help. Note that this is also what the Docs View extension
