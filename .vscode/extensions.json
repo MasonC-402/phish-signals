@@ -1,0 +1,7 @@
+{
+    "recommendations": [
+        "bierner.docs-view",
+        "charliermarsh.ruff",
+        "astral-sh.ty"
+    ]
+}
