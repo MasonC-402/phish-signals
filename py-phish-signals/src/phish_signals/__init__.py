@@ -38,6 +38,15 @@ spelling is part of the contract rather than an internal style choice.
 
 from __future__ import annotations
 
+# Content checks — phrase-list heuristics, display-name spoofing, link text.
+from .content_check import (
+    CONTENT_RULESET,
+    KNOWN_BRAND_NAMES,
+    check_content,
+    check_dangerous_schemes,
+    check_link_text,
+)
+
 # Registrable-domain / brand-list utilities.
 from .domains import (
     KNOWN_BRAND_DOMAINS,
@@ -130,9 +139,10 @@ __version__ = "0.1.0"
 #: a documented stub. Exposed so a caller can branch on the state of the port
 #: instead of discovering it through an ``ImportError``; it shrinks to
 #: irrelevance as the remaining modules land.
-IMPLEMENTED_MODULES: frozenset[str] = frozenset(
-    {"types", "domains", "punycode", "sanitize", "signals", "iocs", "rules"}
-)
+IMPLEMENTED_MODULES: frozenset[str] = frozenset({
+    "types", "domains", "punycode", "sanitize", "signals",
+    "iocs", "rules", "content_check",
+})
 
 __all__ = [
     # Version and port status
@@ -189,6 +199,12 @@ __all__ = [
     "SEVERITY_RANK",
     "assess_confidence",
     "score_signals",
+    # Content checks
+    "CONTENT_RULESET",
+    "KNOWN_BRAND_NAMES",
+    "check_content",
+    "check_dangerous_schemes",
+    "check_link_text",
     # Rules
     "Rule",
     "RuleContext",
