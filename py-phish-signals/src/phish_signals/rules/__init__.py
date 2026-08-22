@@ -15,8 +15,9 @@ sit behind it:
 
 :mod:`~phish_signals.rules.loader`
     The declarative JSON format, for the large share of content rules that
-    are a phrase list and a severity. Data rather than code so that both this
-    implementation and the TypeScript one load the same file and cannot drift.
+    are a phrase list and a severity. Data rather than code so that a shared
+    loader can eventually eliminate per-implementation drift. Currently
+    loaded by the Python side; the TypeScript side still uses inline arrays.
 
 Writing a code rule::
 

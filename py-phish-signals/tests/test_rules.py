@@ -314,7 +314,7 @@ def test_a_raising_rule_is_isolated_not_fatal() -> None:
         {
             "ruleId": "acme.boom",
             "kind": "error",
-            "message": "ValueError: bad regex or whatever",
+            "message": "ValueError",
         }
     ]
 
@@ -700,3 +700,139 @@ def test_missing_directory_is_rejected(tmp_path) -> None:
 
 def test_empty_directory_loads_an_empty_ruleset(tmp_path) -> None:
     assert len(load_ruleset(tmp_path, name="core")) == 0
+
+
+# --------------------------------------------------------------------------
+# Review-driven hardening — each test pins a fix from the code review
+# --------------------------------------------------------------------------
+
+
+def test_bool_version_is_rejected(tmp_path) -> None:
+    """True == 1 in Python, so version: true must not sneak past."""
+    path = tmp_path / "sneaky.json"
+    path.write_text(
+        json.dumps({"version": True, "namespace": "core", "rules": []}),
+        encoding="utf-8",
+    )
+    with pytest.raises(RuleLoadError, match="unsupported format version"):
+        load_rule_file(path)
+
+
+def test_when_hits_without_escalate_to_is_rejected() -> None:
+    spec = {
+        **URGENCY_RULE,
+        "severity": {"base": "low", "when_hits_at_least": 3},
+    }
+    with pytest.raises(RuleLoadError, match="escalate_to is absent"):
+        parse_rule(spec, "core")
+
+
+def test_unhashable_category_raises_load_error() -> None:
+    """A list or dict in 'category' must raise RuleLoadError, not TypeError."""
+    spec = {**URGENCY_RULE, "category": ["social"]}
+    with pytest.raises(RuleLoadError, match="is not one of"):
+        parse_rule(spec, "core")
+
+
+def test_unhashable_severity_base_raises_load_error() -> None:
+    spec = {**URGENCY_RULE, "severity": {"base": []}}
+    with pytest.raises(RuleLoadError, match="is not one of"):
+        parse_rule(spec, "core")
+
+
+def test_unhashable_field_raises_load_error() -> None:
+    spec = {
+        **URGENCY_RULE,
+        "match": {"type": "phrases", "field": [], "any_of": ["x"]},
+    }
+    with pytest.raises(RuleLoadError, match=r"match\.field"):
+        parse_rule(spec, "core")
+
+
+def test_invalid_severity_override_is_rejected() -> None:
+    with pytest.raises(RulesetError, match="invalid severity"):
+        Ruleset(
+            name="test",
+            rules=(static_rule("core.a", "sig_a"),),
+            severity_overrides={"sig_a": "urgent"},
+        )
+
+
+def test_severity_overrides_are_defensively_copied() -> None:
+    overrides: dict = {"sig_a": "high"}
+    ruleset = Ruleset(
+        name="test",
+        rules=(static_rule("core.a", "sig_a"),),
+        severity_overrides=overrides,
+    )
+    # Mutating the original dict must not affect the ruleset
+    overrides["sig_a"] = "critical"
+    assert ruleset.severity_overrides["sig_a"] == "high"
+
+
+def test_invalid_signal_category_is_reported_as_malformed() -> None:
+    """A signal with category='other' must not slip through."""
+
+    def bad_category(ctx: RuleContext) -> list[Signal]:
+        return [cast(Signal, {
+            "id": "sig",
+            "category": "other",
+            "severity": "low",
+            "label": "Bad",
+            "detail": "x",
+        })]
+
+    ruleset = Ruleset(
+        name="test",
+        rules=(Rule(
+            id="acme.bad",
+            emits=frozenset({"sig"}),
+            evaluate=bad_category,
+        ),),
+    )
+    run = evaluate_ruleset(ruleset, EMPTY_CONTEXT)
+    assert run["signals"] == []
+    assert run["diagnostics"][0]["kind"] == "malformed_signal"
+
+
+def test_generator_rule_that_raises_is_isolated() -> None:
+    """Fault isolation must cover iteration, not just the evaluate call."""
+
+    def gen_boom(ctx: RuleContext) -> list[Signal]:
+        def _gen():
+            yield cast(Signal, {
+                "id": "sig",
+                "category": "social",
+                "severity": "low",
+                "label": "L",
+                "detail": "d",
+            })
+            raise RuntimeError("mid-iteration failure")
+        return list(_gen())  # type: ignore[return-value]
+
+    ruleset = Ruleset(
+        name="test",
+        rules=(
+            Rule(id="acme.gen", emits=frozenset({"sig"}), evaluate=gen_boom),
+            static_rule("core.ok", "sig_ok"),
+        ),
+    )
+    run = evaluate_ruleset(ruleset, EMPTY_CONTEXT)
+    assert any(d["kind"] == "error" for d in run["diagnostics"])
+    assert any(s["id"] == "sig_ok" for s in run["signals"])
+
+
+def test_diagnostic_message_does_not_leak_exception_text() -> None:
+    """Diagnostics are documented as safe to display; no attacker content."""
+
+    def leak(ctx: RuleContext) -> list[Signal]:
+        raise ValueError("SECRET email body content here")
+
+    ruleset = Ruleset(
+        name="test",
+        rules=(Rule(id="acme.leak", emits=frozenset({"s"}), evaluate=leak),),
+    )
+    run = evaluate_ruleset(ruleset, EMPTY_CONTEXT)
+    msg = run["diagnostics"][0]["message"]
+    assert msg == "ValueError"
+    assert "SECRET" not in msg

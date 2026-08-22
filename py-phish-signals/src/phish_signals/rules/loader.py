@@ -187,7 +187,7 @@ def _parse_severity(value: object, where: str) -> tuple[Severity, Severity, int]
     _check_keys(spec, _SEVERITY_KEYS, where, "severity")
 
     base_raw = spec.get("base")
-    if base_raw not in _VALID_SEVERITIES:
+    if not isinstance(base_raw, str) or base_raw not in _VALID_SEVERITIES:
         raise _fail(
             where,
             f"severity.base {base_raw!r} is not one of {sorted(_VALID_SEVERITIES)!r}",
@@ -195,10 +195,17 @@ def _parse_severity(value: object, where: str) -> tuple[Severity, Severity, int]
     base = cast(Severity, base_raw)
 
     if "escalate_to" not in spec:
+        if "when_hits_at_least" in spec:
+            raise _fail(
+                where,
+                "severity.when_hits_at_least is set but escalate_to is "
+                "absent; a threshold without an escalation target has no "
+                "effect and is likely a mistake",
+            )
         return base, base, 1 << 30
 
     escalate_raw = spec.get("escalate_to")
-    if escalate_raw not in _VALID_SEVERITIES:
+    if not isinstance(escalate_raw, str) or escalate_raw not in _VALID_SEVERITIES:
         raise _fail(
             where,
             f"severity.escalate_to {escalate_raw!r} is not one of "
@@ -223,7 +230,7 @@ def _build_phrases_matcher(
     _check_keys(spec, _PHRASES_KEYS, where, "match")
 
     field_name = spec.get("field", "scan_text")
-    if field_name not in TEXT_FIELDS:
+    if not isinstance(field_name, str) or field_name not in TEXT_FIELDS:
         raise _fail(
             where,
             f"match.field {field_name!r} is not one of {sorted(TEXT_FIELDS)!r}",
@@ -277,7 +284,7 @@ def parse_rule(
         raise _fail(where, "signal_id must be a non-empty string")
 
     category = data["category"]
-    if category not in _VALID_CATEGORIES:
+    if not isinstance(category, str) or category not in _VALID_CATEGORIES:
         raise _fail(
             where, f"category {category!r} is not one of {sorted(_VALID_CATEGORIES)!r}"
         )
@@ -393,7 +400,11 @@ def parse_rule_file(data: Mapping[str, Any], *, where: str = "<file>") -> list[R
     _check_keys(data, _FILE_KEYS, where, "file")
 
     version = data.get("version")
-    if version != FORMAT_VERSION:
+    is_valid_version = (
+        isinstance(version, int) and not isinstance(version, bool)
+        and version == FORMAT_VERSION
+    )
+    if not is_valid_version:
         raise _fail(
             where,
             f"unsupported format version {version!r}; this loader understands "

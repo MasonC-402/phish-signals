@@ -41,7 +41,9 @@ _GENERIC_GREETING_PATTERNS = [
 
 _DISPLAY_NAME_RE = re.compile(r'^"?([^"<]+)"?\s*<(.+)>$')
 _DISPLAY_AS_EMAIL_RE = re.compile(r"[\w.+-]+@([\w.-]+\.[a-z]{2,})", re.IGNORECASE)
-_CAPS_WORD_RE = re.compile(r"\b[A-Z]{4,}\b")
+# ASCII word boundaries to match JavaScript's \b behavior — Python's \b
+# treats Unicode letters as word characters, which would under-count.
+_CAPS_WORD_RE = re.compile(r"(?<![A-Za-z0-9_])[A-Z]{4,}(?![A-Za-z0-9_])")
 
 # ── Declarative phrase rules ──────────────────────────────────────────
 

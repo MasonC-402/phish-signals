@@ -1,15 +1,15 @@
 # Shared rule definitions
 
-Language-neutral phishing rules, as data. Both implementations —
-`typescript/` and `py-phish-signals/` — load the files in this directory and
-build the same rules from them.
+Language-neutral phishing rules, as data. The Python implementation
+(`py-phish-signals/`) loads the files in this directory via its declarative
+rule loader. The TypeScript implementation (`typescript/`) still uses inline
+phrase arrays; porting its content check to load from this directory is
+planned but not yet done.
 
-That is the entire point of the directory existing. A phrase list written as
-code has to be written twice, and every phrase added to one side is drift
-until somebody adds it to the other; `conformance/` would catch that drift,
-but only after the fact and only where a vector happens to cover it. A phrase
-list written as data is added once and is live in both languages immediately,
-with nothing to keep in sync.
+The goal: a phrase list written as data is added once and is live in both
+languages immediately, with nothing to keep in sync. Until the TypeScript
+loader lands, the Python side is the only consumer, and the TypeScript
+phrase arrays must be kept in sync manually (or via `conformance/`).
 
 ## Relationship to `conformance/`
 

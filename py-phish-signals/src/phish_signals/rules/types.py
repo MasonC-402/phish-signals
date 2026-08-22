@@ -58,6 +58,10 @@ from ..types import (
     UrlAnalysis,
 )
 
+_VALID_SEVERITIES: frozenset[str] = frozenset({
+    "critical", "high", "medium", "low", "info",
+})
+
 #: A rule id must be ``<namespace>.<name>``, both lowercase identifiers. The
 #: namespace is not decoration: it is what stops a custom rule from colliding
 #: with a built-in by accident, and what makes ``without_namespace('acme')``
@@ -280,6 +284,12 @@ class Ruleset:
     severity_overrides: Mapping[str, Severity] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        # Freeze a defensive copy so mutating the original dict after
+        # construction cannot introduce dangling or invalid overrides.
+        object.__setattr__(
+            self, "severity_overrides",
+            dict(self.severity_overrides),
+        )
         self.validate()
 
     def validate(self) -> None:
@@ -316,7 +326,13 @@ class Ruleset:
                     )
                 emitters[signal_id] = rule
 
-        for signal_id in self.severity_overrides:
+        for signal_id, severity in self.severity_overrides.items():
+            if severity not in _VALID_SEVERITIES:
+                raise RulesetError(
+                    f"ruleset {self.name!r}: severity override for signal "
+                    f"id {signal_id!r} has invalid severity {severity!r}; "
+                    f"must be one of {sorted(_VALID_SEVERITIES)!r}"
+                )
             if signal_id not in emitters:
                 raise RulesetError(
                     f"ruleset {self.name!r}: severity override for signal id "

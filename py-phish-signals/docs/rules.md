@@ -22,8 +22,8 @@ from phish_signals import check_content, score_signals
 result = check_content("ACT NOW or your account will be suspended!")
 scored = score_signals(result["signals"])
 
-print(scored["verdict"])   # "Medium Risk"
-print(scored["score"])     # 14
+print(scored["verdict"])   # "Low Risk"
+print(scored["score"])     # 6
 for signal in scored["signals"]:
     print(f"  [{signal['severity']}] {signal['label']}: {signal['detail']}")
 ```
@@ -64,8 +64,8 @@ scored = score_signals(run["signals"])
 ### Writing a declarative JSON rule
 
 Most content rules are a phrase list and a severity. Write them as data
-instead of code so both the Python and TypeScript implementations can load
-the same file:
+instead of code so the phrase lists are defined once (the TypeScript loader
+is planned but not yet ported):
 
 ```json
 {

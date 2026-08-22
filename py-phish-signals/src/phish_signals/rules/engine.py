@@ -34,6 +34,13 @@ from typing import Literal, TypedDict
 from ..types import Severity, Signal
 from .types import Rule, RuleContext, Ruleset
 
+_VALID_CATEGORIES = frozenset({
+    "authentication", "identity", "infrastructure", "payload", "social",
+})
+_VALID_SEVERITIES = frozenset({
+    "critical", "high", "medium", "low", "info",
+})
+
 #: Why a rule contributed nothing, or contributed less than it tried to.
 DiagnosticKind = Literal["error", "undeclared_signal", "malformed_signal"]
 
@@ -66,12 +73,23 @@ def _looks_like_signal(value: object) -> bool:
     Worth doing because a rule is third-party code and a malformed dict does
     not fail here — it fails much later, inside scoring or JSON export, with a
     KeyError that names neither the rule nor the message that triggered it.
+
+    Also validates that category, severity, and id are within the allowed
+    values — an invalid severity silently scores zero points, and an invalid
+    category silently drops the signal from every category bucket, so both
+    produce evidence that is not reflected in the verdict.
     """
     if not isinstance(value, dict):
         return False
-    return all(
+    if not all(
         isinstance(value.get(key), str)
         for key in ("id", "category", "severity", "label", "detail")
+    ):
+        return False
+    return (
+        bool(value.get("id"))
+        and value.get("category") in _VALID_CATEGORIES
+        and value.get("severity") in _VALID_SEVERITIES
     )
 
 
@@ -98,6 +116,12 @@ def _run_rule(
 
     try:
         produced = rule.evaluate(context)
+        # Materialize the result inside fault isolation so a generator
+        # that raises during iteration is caught the same way as a rule
+        # that raises during evaluate().
+        if produced is None:
+            return signals, diagnostics
+        items = list(produced)
     except Exception as exc:
         if strict:
             raise
@@ -105,18 +129,15 @@ def _run_rule(
             {
                 "ruleId": rule.id,
                 "kind": "error",
-                # Type and message only. The traceback can quote message
-                # content back at whoever reads the diagnostic, and this
-                # string is meant to be safe to log and display.
-                "message": f"{type(exc).__name__}: {exc}",
+                # Type name only — str(exc) can contain attacker-controlled
+                # message content lifted from the email being analyzed, and
+                # diagnostics are documented as safe to display and log.
+                "message": f"{type(exc).__name__}",
             }
         )
         return signals, diagnostics
 
-    if produced is None:
-        return signals, diagnostics
-
-    for item in produced:
+    for item in items:
         if not _looks_like_signal(item):
             diagnostics.append(
                 {

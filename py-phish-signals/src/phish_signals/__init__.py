@@ -9,22 +9,19 @@ This module's role is the same as ``typescript/src/index.ts``: the public API
 surface. Everything a consumer needs is re-exported from here; the submodules
 underneath are internal layout, not a contract.
 
-Ported so far — the zero-runtime-dependency layer, which is also the layer the
-conformance vectors currently cover: shared types, domain helpers, punycode
-and homograph identification, input sanitizing, scoring, and IOC handling. The
+Ported so far: shared types, domain helpers, punycode and homograph
+identification, input sanitizing, scoring, IOC handling, the rule engine, and
+content checks (urgency language, credential/financial/authority-impersonation
+phrase detection, generic greetings, display-name spoofing, excessive
+capitalization, link-text deception, dangerous link schemes). The remaining
 checks, aggregation, and parsing layers exist as documented stubs and export
 nothing yet; :data:`IMPLEMENTED_MODULES` is the machine-readable version of
 that status.
 
-Plus one layer with no counterpart in the reference implementation yet: the
-rule layer (:mod:`phish_signals.rules`), which gives the detection logic
-currently written inline inside each check a name, so it can be listed,
-disabled, replaced, or written by a consumer of this library. The checks
-layer is still stubs on this side, which is why the rule layer landed first
-— those checks get to be *built* as rules rather than ported and then
-retrofitted. It is designed to port to TypeScript, and the declarative half
-of it is designed so that most content rules never need porting at all: both
-implementations read the same JSON.
+The rule layer (:mod:`phish_signals.rules`) gives the detection logic a name,
+so it can be listed, disabled, replaced, or extended by consumers. The
+declarative half of it loads phrase-list rules from JSON so they are defined
+once and shared across implementations.
 
 Naming: the TypeScript source is camelCase because that is idiomatic there,
 and the conformance vectors name functions the same way since it is the
