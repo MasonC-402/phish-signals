@@ -217,9 +217,9 @@ MessageInfo = TypedDict(
     {
         "subject": str,
         "from": str,
-        "returnPath": "str | None",
-        "replyTo": "str | None",
-        "date": "str | None",
+        "returnPath": str | None,
+        "replyTo": str | None,
+        "date": str | None,
     },
 )
 
