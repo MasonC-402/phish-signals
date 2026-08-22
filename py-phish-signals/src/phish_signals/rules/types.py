@@ -45,6 +45,7 @@ import re
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass, field, replace
 from functools import cached_property
+from types import MappingProxyType
 from typing import TypedDict
 
 from ..domains import registrable_domain
@@ -60,6 +61,13 @@ from ..types import (
 
 _VALID_SEVERITIES: frozenset[str] = frozenset({
     "critical", "high", "medium", "low", "info",
+})
+
+#: Allowed values for :class:`~phish_signals.types.EvidenceCategory`. Defined
+#: here (rather than in loader or engine) so all three sub-modules share a
+#: single source of truth without circular imports.
+_VALID_CATEGORIES: frozenset[str] = frozenset({
+    "authentication", "identity", "infrastructure", "payload", "social",
 })
 
 #: A rule id must be ``<namespace>.<name>``, both lowercase identifiers. The
@@ -288,7 +296,7 @@ class Ruleset:
         # construction cannot introduce dangling or invalid overrides.
         object.__setattr__(
             self, "severity_overrides",
-            dict(self.severity_overrides),
+            MappingProxyType(dict(self.severity_overrides)),
         )
         self.validate()
 

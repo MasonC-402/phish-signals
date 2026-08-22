@@ -32,14 +32,7 @@ import traceback
 from typing import Literal, TypedDict
 
 from ..types import Severity, Signal
-from .types import Rule, RuleContext, Ruleset
-
-_VALID_CATEGORIES = frozenset({
-    "authentication", "identity", "infrastructure", "payload", "social",
-})
-_VALID_SEVERITIES = frozenset({
-    "critical", "high", "medium", "low", "info",
-})
+from .types import _VALID_CATEGORIES, _VALID_SEVERITIES, Rule, RuleContext, Ruleset
 
 #: Why a rule contributed nothing, or contributed less than it tried to.
 DiagnosticKind = Literal["error", "undeclared_signal", "malformed_signal"]

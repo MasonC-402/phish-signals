@@ -59,19 +59,19 @@ from pathlib import Path
 from typing import Any, cast
 
 from ..types import EvidenceCategory, Severity, Signal
-from .types import Rule, RuleContext, RuleError, Ruleset
+from .types import (
+    _VALID_CATEGORIES,
+    _VALID_SEVERITIES,
+    Rule,
+    RuleContext,
+    RuleError,
+    Ruleset,
+)
 
 #: Format version understood by this loader. A file declaring anything else is
 #: rejected rather than best-effort parsed, so that adding a matcher type later
 #: cannot make an old loader silently ignore it.
 FORMAT_VERSION = 1
-
-_VALID_CATEGORIES: frozenset[str] = frozenset(
-    {"authentication", "identity", "infrastructure", "payload", "social"}
-)
-_VALID_SEVERITIES: frozenset[str] = frozenset(
-    {"critical", "high", "medium", "low", "info"}
-)
 
 #: Text a ``phrases`` matcher can scan, mapped to the pre-lowercased
 #: :class:`~phish_signals.rules.types.RuleContext` property that provides it.
