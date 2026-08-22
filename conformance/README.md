@@ -71,21 +71,51 @@ normal test run — there's no separate command.
   the harness fails hard rather than skipping.
 - **Python**: `py-phish-signals/tests/test_conformance.py`, run via
   `uv run pytest` from `py-phish-signals/` (see `py-phish-signals/README.md`
-  for setup). Reads the same files,
-  converts each vector's camelCase `function` name to snake_case
-  (`registrableDomain` → `registrable_domain`) to find it under
-  `phish_signals.<module>`. Unlike the TypeScript side, a vector whose
-  module or function doesn't exist yet is **skipped, not failed** — the
-  Python port is in progress, and "not implemented yet" isn't the same
-  failure as "implemented and wrong." A vector whose function exists but
-  returns the wrong value still fails normally.
+  for setup). Reads the same files, converting each vector's camelCase
+  `module` and `function` names to snake_case (`urlCheck` →
+  `phish_signals.url_check`, `registrableDomain` → `registrable_domain`) to
+  find them. Every module vectored so far is a single lowercase word, where
+  that conversion is the identity; it starts mattering with the checks layer.
+  Unlike the TypeScript side, a vector whose module or function doesn't exist
+  yet is **skipped, not failed** — the Python port is in progress, and "not
+  implemented yet" isn't the same failure as "implemented and wrong." A vector
+  whose function exists but returns the wrong value still fails normally.
+
+  One consequence worth knowing before writing Python-side code: because
+  `expect` is compared by exact deep equality against parsed JSON, anything a
+  vectored function returns has to *be* JSON-shaped data — dicts and lists,
+  not class instances, which never compare equal to a `dict`. The Python
+  implementation uses `TypedDict` for exactly this reason. Vectors are
+  therefore also the thing that pins **data key spelling** across the two
+  languages: `benignSignals` stays camelCase on the Python side, because the
+  key is part of the contract rather than an internal style choice.
 
 ## Coverage
 
 Only the pure, zero-runtime-dependency layer is vectored so far —
 `domains`, `punycode`, `iocs`, and `signals`'s `scoreSignals`. The larger
 surface (`urlCheck`, `authCheck`, `attachmentCheck`, `combineResults`, the
-parsers, ...) has no vectors yet. Add them as the Python port reaches each
+parsers, ...) has no vectors yet. Both implementations now satisfy every
+vector here.
+
+Coverage is thinner than the passing count suggests, and it is worth being
+precise about that: 26 cases is enough to pin the documented quirks, not
+enough to catch a subtly wrong port. Two areas where the languages differ by
+default, both found by differential-testing the Python port against the
+TypeScript one rather than by any vector here, are worth vectors of their own
+when someone next touches this directory:
+
+- **Half-way rounding.** `Math.round(31.5)` is 32; Python's built-in
+  `round(31.5)` is 32 too, but `round(2.5)` is 2 where JavaScript gives 3 —
+  banker's rounding versus half-up. Category scores land on exact halves
+  routinely (28 + 14 × 0.25), so this is reachable, not theoretical.
+- **String collation.** `localeCompare` — which `scoreSignals` uses to break a
+  severity tie — is case-insensitive at the primary level and sorts accented
+  letters next to their base letter. Codepoint comparison, the default in most
+  other languages, does neither: it sorts `"apple"` after `"Zebra"`, and `"Á"`
+  after `"Z"`. Every signal label this package emits is ASCII and title-cased,
+  so nothing currently reaches the disagreement, which is exactly why a vector
+  should pin it before someone adds a label that does. Add them as the Python port reaches each
 module, generating the `expect` value from the TypeScript implementation
 (the reference) rather than hand-deriving it — see the git history of this
 directory for how the existing vectors were produced.

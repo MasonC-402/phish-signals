@@ -6,7 +6,7 @@ readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [
-    { name = "MasoMoto | Security Analyst/Software Engineer/Researcher", email = "8381464+MasonC-402@users.noreply.github.com" },
+    { name = "MasonC-402 | Security Analyst/Software Engineer/Researcher", email = "8381464+MasonC-402@users.noreply.github.com" },
 ]
 requires-python = ">=3.10"
 # Independent Python implementation of the same detection engine published to
@@ -55,4 +55,45 @@ packages = ["src/phish_signals"]
 testpaths = ["tests"]
 
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = [
+    "pytest>=8",
+    "ruff>=0.16.4",
+    "ty>=0.0.73",
+]
+
+[tool.ruff]
+# Matches .python-version and the floor declared in requires-python above, so
+# ruff's version-gated rules (and its pyupgrade fixes in particular) target
+# the oldest interpreter this package claims to support rather than the newest
+# one that happens to be installed locally.
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle
+    "F",      # pyflakes
+    "I",      # import sorting
+    "UP",     # pyupgrade
+    "B",      # bugbear
+    "SIM",    # simplify
+    "RUF",    # ruff-specific
+]
+ignore = [
+    # __all__ in __init__.py is grouped to mirror typescript/src/index.ts's
+    # sectioning (shared types, domain helpers, input handling, checks,
+    # scoring/output, parsing) — the porting docs ask for that grouping
+    # explicitly, and it is more useful when diffing the two public surfaces
+    # against each other than alphabetical order would be.
+    "RUF022",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# RUF001 warns that a string contains characters visually confusable with
+# ASCII. In punycode.py that is not a defect being flagged — it is the table
+# of Latin lookalikes the homograph detector matches against, so every entry
+# is *required* to be confusable with ASCII and the warning fires once per
+# character by design. The characters are written literally rather than as
+# escapes because the point of the table is what they look like, which an
+# escape sequence hides from the reader reviewing it.
+"src/phish_signals/punycode.py" = ["RUF001"]
