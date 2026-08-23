@@ -22,7 +22,7 @@ importing from the working directory) plus [pytest](https://docs.pytest.org/)'s
 conventional `tests/` directory.
 
 ```text
-py-phish-signals/
+python/
 ├── pyproject.toml
 ├── LICENSE
 ├── .python-version          # 3.14, pins the interpreter uv uses locally
@@ -83,18 +83,17 @@ class, `TypedDict(...)` returns a bare `dict` whose `__init__` never ran, and
 Behavior belongs in module-level functions taking and returning these dicts,
 which is how the TypeScript side is written too.
 
-The directory is `py-phish-signals/` (sits clearly alongside `typescript/` in
-the repo listing), but the **PyPI distribution name is the plain
-`phish-signals`** (confirmed available), so `pip install phish-signals`
-matches the repo's own name without a redundant `py-` prefix. Either way, the
-**import name is `phish_signals`** — underscored, since Python import names
-can't contain hyphens: `import phish_signals`, not `import phish-signals` or
-`import py_phish_signals`.
+The directory is `python/` (sits alongside `typescript/` in the repo
+listing), but the **PyPI distribution name is the plain `phish-signals`**
+(confirmed available), so `pip install phish-signals` matches the repo's own
+name. Either way, the **import name is `phish_signals`** — underscored,
+since Python import names can't contain hyphens: `import phish_signals`, not
+`import phish-signals`.
 
 ## Setup
 
 ```bash
-cd py-phish-signals
+cd python
 uv sync                # creates .venv, installs the package + dev dependencies
 uv run pytest
 ```

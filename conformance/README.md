@@ -69,8 +69,8 @@ normal test run — there's no separate command.
   fails the specific case (not the whole file) on a mismatch. Every vector
   here already has a matching TS export — a missing one is a real bug, so
   the harness fails hard rather than skipping.
-- **Python**: `py-phish-signals/tests/test_conformance.py`, run via
-  `uv run pytest` from `py-phish-signals/` (see `py-phish-signals/README.md`
+- **Python**: `python/tests/test_conformance.py`, run via
+  `uv run pytest` from `python/` (see `python/README.md`
   for setup). Reads the same files, converting each vector's camelCase
   `module` and `function` names to snake_case (`urlCheck` →
   `phish_signals.url_check`, `registrableDomain` → `registrable_domain`) to

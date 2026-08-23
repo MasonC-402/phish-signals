@@ -1,7 +1,7 @@
 {
     // Everything .vscode/settings.json in this folder actually depends on.
     // These were previously only recommended from the repo root, so opening
-    // py-phish-signals/ directly as the workspace folder never surfaced them.
+    // python/ directly as the workspace folder never surfaced them.
     "recommendations": [
         "ms-python.python",
         "ms-python.vscode-pylance",

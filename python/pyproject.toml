@@ -12,10 +12,10 @@ requires-python = ">=3.10"
 # Independent Python implementation of the same detection engine published to
 # npm as @farksecurity/phish-signals (../typescript). Not a binding — see
 # ../conformance/ for what keeps the two in agreement on what a given input
-# means. Directory is py-phish-signals/ (repo-internal name, to sit clearly
-# alongside typescript/); the PyPI distribution name is the plain
-# "phish-signals" above, so `pip install phish-signals` matches the repo name
-# without a redundant py- prefix.
+# means. Directory is python/ (sits alongside ../typescript/); the PyPI
+# distribution name is the plain "phish-signals" above, so
+# `pip install phish-signals` matches the repo name without a redundant
+# language prefix.
 #
 # Every module through the checks/scoring/output layer is stdlib-only by
 # design (see each module's own docstring). These three are the deliberate,

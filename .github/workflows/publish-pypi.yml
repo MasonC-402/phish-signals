@@ -1,7 +1,7 @@
 name: Publish to PyPI
 
 # Mirrors typescript/'s .github/workflows/publish.yml: releases are cut by
-# tag, not by every push. Bump "version" in py-phish-signals/pyproject.toml,
+# tag, not by every push. Bump "version" in python/pyproject.toml,
 # commit, push a matching pypi-vX.Y.Z tag. The pypi- prefix (as opposed to
 # npm's bare npm-v) keeps the two release pipelines from ever triggering each
 # other, since both live in this same repo.
@@ -35,12 +35,12 @@ concurrency:
   group: publish-pypi
   cancel-in-progress: false
 
-# Everything in this job operates on the py-phish-signals/ package
+# Everything in this job operates on the python/ package
 # specifically — the TypeScript package under typescript/ has its own
 # publish.yml and its own tag prefix, so the two never step on each other.
 defaults:
   run:
-    working-directory: py-phish-signals
+    working-directory: python
 
 jobs:
   publish:
@@ -52,14 +52,14 @@ jobs:
       # working-directory (an input this action defines itself — separate
       # from the job-level `defaults.run.working-directory` below, which
       # only applies to `run:` steps, not `uses:` steps like this one) scopes
-      # its dependency-cache glob to py-phish-signals/pyproject.toml and
+      # its dependency-cache glob to python/pyproject.toml and
       # uv.lock. It doesn't need to be told the Python version explicitly:
       # every `uv` invocation below reads .python-version from its own
       # working directory automatically.
       - name: Install uv
         uses: astral-sh/setup-uv@v10.0.1
         with:
-          working-directory: py-phish-signals
+          working-directory: python
 
       - name: Install dependencies
         run: uv sync --locked
@@ -94,4 +94,4 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: py-phish-signals/dist
+          packages-dir: python/dist

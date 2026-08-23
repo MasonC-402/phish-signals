@@ -1,7 +1,7 @@
 # Shared rule definitions
 
 Language-neutral phishing rules, as data. The Python implementation
-(`py-phish-signals/`) loads the files in this directory via its declarative
+(`python/`) loads the files in this directory via its declarative
 rule loader. The TypeScript implementation (`typescript/`) still uses inline
 phrase arrays; porting its content check to load from this directory is
 planned but not yet done.
