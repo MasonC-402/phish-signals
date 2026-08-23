@@ -2,21 +2,28 @@
 
 Port of ``typescript/src/jsonExport.ts``.
 
-**Not implemented yet** — this module is a placeholder so the porting
-surface is visible in the package layout rather than tracked somewhere
-outside it.
+Everything else this tool produces is written for a person to read. A SOAR
+playbook or a ticketing system's enrichment step wants the same information
+as structured data it can branch on, not prose it has to re-parse.
 
-Deliberately defines no callables. The conformance harness skips a vector
-whose function is absent but *fails* one whose function exists and returns
-the wrong value (see ``tests/test_conformance.py``), so a stub that raised
-``NotImplementedError`` would turn "not ported yet" into the same red X as
-"ported and wrong" the moment vectors land for this module.
-
-Public surface to port, from ``typescript/src/index.ts``:
-
-- ``build_json_export``
+Kept intentionally dumb — no reshaping, no renaming fields, no subset.
 """
 
 from __future__ import annotations
 
-__all__: list[str] = []
+import json
+
+from .types import CombinedResult
+
+
+def build_json_export(result: CombinedResult) -> str:
+    # jsonReport hasn't been assigned onto ``result`` yet at the point this
+    # is called, so there's nothing here for json.dumps to need to exclude —
+    # but excluding it explicitly makes that non-self-referential property
+    # obvious from reading this function alone, rather than only true by
+    # call-order convention.
+    exportable = {k: v for k, v in result.items() if k != "jsonReport"}
+    return json.dumps(exportable, indent=2, ensure_ascii=False)
+
+
+__all__ = ["build_json_export"]

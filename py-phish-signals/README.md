@@ -5,13 +5,12 @@ An independent Python implementation of the same detection engine as
 second implementation held to the same behavior via
 [`../conformance/`](../conformance/).
 
-**Status: the zero-dependency primitives are ported; the rest is stubbed.**
-`types`, `domains`, `punycode`, `sanitize`, `signals`, and `iocs` are
-implemented and pass every conformance vector currently in the suite. The
-checks, aggregation, and parsing layers exist as documented placeholder
-modules that export nothing yet — each names the TypeScript functions it owes
-and any porting hazard specific to it. `phish_signals.IMPLEMENTED_MODULES` is
-the machine-readable version of that split.
+**Status: fully ported.** Every module in `typescript/src/` has a Python
+counterpart under `src/phish_signals/`, passing every conformance vector
+currently in the suite (see `../conformance/`, which only vectors the pure,
+zero-dependency layer so far — the larger surface has no vectors yet on
+either side). `phish_signals.IMPLEMENTED_MODULES` is the machine-readable
+list of what's behind it, which at this point is everything.
 
 Managed with [uv](https://docs.astral.sh/uv/).
 
@@ -29,17 +28,35 @@ py-phish-signals/
 ├── .python-version          # 3.14, pins the interpreter uv uses locally
 ├── src/
 │   └── phish_signals/
-│       ├── __init__.py      # public API surface — mirrors typescript/src/index.ts's role
-│       ├── py.typed         # PEP 561 marker: this package ships inline types
-│       ├── types.py         # shared shapes, as TypedDicts — see the note below
-│       ├── domains.py       # ported
-│       ├── punycode.py      # ported
-│       ├── sanitize.py      # ported
-│       ├── signals.py       # ported
-│       ├── iocs.py          # ported
-│       └── *.py             # everything else: documented stubs, export nothing yet
+│       ├── __init__.py         # public API surface — mirrors typescript/src/index.ts's role
+│       ├── py.typed            # PEP 561 marker: this package ships inline types
+│       ├── types.py            # shared shapes, as TypedDicts — see the note below
+│       ├── domains.py          # registrable-domain / brand-list helpers
+│       ├── punycode.py         # punycode decode + homograph/confusable detection
+│       ├── sanitize.py         # input validation, dangerous-unicode stripping
+│       ├── header_parser.py    # raw header-block -> headers + ordered lines
+│       ├── signals.py          # scoring engine
+│       ├── iocs.py             # IOC extraction, defang/refang
+│       ├── url_check.py        # typosquat/homograph/structural URL analysis
+│       ├── auth_check.py       # SPF/DKIM/DMARC from Authentication-Results
+│       ├── received_chain.py   # Received-header chain / HELO-RDNS spoofing
+│       ├── header_anomalies.py # everything else header-shaped
+│       ├── content_check.py    # body phrase heuristics + rule engine wiring
+│       ├── attachment_check.py # filename/extension/MIME-type heuristics
+│       ├── zip_check.py        # ZIP central-directory listing, no decompression
+│       ├── mitre.py            # ATT&CK technique lookup
+│       ├── rules/              # named detection units + declarative loader
+│       ├── recommendations.py  # scored evidence -> analyst actions
+│       ├── sigma_rule.py       # Sigma detection-rule generation
+│       ├── kql_query.py        # Defender/Sentinel Advanced Hunting KQL
+│       ├── json_export.py      # machine-readable export of a CombinedResult
+│       ├── combine_results.py  # the assembly point — runs and scores everything
+│       ├── email_parser.py     # raw .eml / pasted-message -> ParsedEmail
+│       ├── msg_parser.py       # Outlook .msg -> raw email text (extract_msg)
+│       └── qr_check.py         # QR decoding from embedded/attached images
 └── tests/
-    └── test_conformance.py  # runs ../../conformance/vectors against whatever's implemented
+    ├── test_conformance.py     # runs ../../conformance/vectors against this port
+    └── test_*.py               # one file per module, plus test_rules.py / test_combine_results.py
 ```
 
 Note that `.python-version` (3.14, what uv uses locally) and
@@ -83,36 +100,30 @@ uv run pytest
 ```
 
 Every vector in the suite currently passes. `tests/test_conformance.py` skips
-a vector whose module or function doesn't exist yet rather than failing on it
-(see that file's docstring), so as the remaining modules land their vectors
-flip from skip to pass — or to fail, if the port doesn't match, which is the
-point.
+a vector whose module or function doesn't exist — a state that shouldn't
+occur any more now that every module is ported, but the harness stays
+skip-not-fail for whichever side of the two implementations a future vector
+lands on first.
 
-To add a runtime dependency once parsing needs one (`extract-msg`, `pyzbar`,
-...): `uv add extract-msg`. To add a dev-only one: `uv add --dev <package>`.
+Three runtime dependencies exist for exactly two modules: `extract-msg`
+(`msg_parser.py`, built on `olefile` — reads an Outlook `.msg`'s compound-file
+structure and MAPI properties) and `pillow` + `opencv-python-headless`
+(`qr_check.py` — image decoding and QR detection). `pyzbar`, this package's
+other originally-considered QR option, was tried and rejected: it fails at
+*import* time on any machine without the system `zbar` library already
+installed, which would break the whole package rather than just QR scanning;
+`opencv-python-headless` needs nothing beyond `pip`/`uv`. Every other module
+is stdlib-only — see each module's own docstring for why that boundary is
+where it is.
 
-## Porting order
-
-Leaves-first, so each layer is verifiable before anything depends on it:
-
-1. ~~Zero-dependency primitives: `domains`, `punycode`, `sanitize`, `signals`
-   (scoring), `iocs`~~ — **done**, plus `types` underneath them
-2. Checks over plain data: `urlCheck`, `authCheck`, `headerAnomalies`,
-   `contentCheck`, `attachmentCheck`, `receivedChain`
-3. Aggregation/output: `combineResults`, `sigmaRule`, `kqlQuery`, `mitre`,
-   `recommendations`, `jsonExport`
-4. Parsing last, where the runtime dependencies get swapped for Python
-   equivalents: `mailparser` → stdlib `email`, `@kenjiuno/msgreader` →
-   `extract-msg`, `jsqr`/`pngjs`/`jpeg-js` → `pyzbar`/Pillow or
-   `opencv-python`
-
-Do not port `zipCheck` onto Python's `zipfile` module as-is: the TypeScript
+`zip_check.py` is a from-scratch port of the TypeScript central-directory
+parser, not a wrapper around Python's `zipfile` module: the TypeScript
 version deliberately degrades gracefully on a truncated or forged central
 directory (see `typescript/test/zipcheck.test.ts`) rather than raising, which
 matters for detection — an attacker-crafted ZIP that makes the parser throw
 must not be indistinguishable from "nothing suspicious found." `zipfile` is
-stricter than that; either handle its exceptions to match the TypeScript
-behavior, or port the hand-rolled central-directory parse directly.
+stricter than that, so this port reads the same signature/EOCD/central-directory
+bytes directly, the same way the TypeScript side does.
 
 ## Function naming
 
