@@ -175,6 +175,44 @@ class AttachmentSummary(_AttachmentSummaryRequired, total=False):
     zipUnreadable: bool
 
 
+class RawAttachmentMeta(TypedDict, total=False):
+    """What the raw-email parser sees for one MIME part before it is reduced
+    to an :class:`AttachmentSummary` — everything optional, since not every
+    part carries every field.
+    """
+
+    filename: str
+    contentType: str
+    size: int
+    contentDisposition: str
+    #: True for a part that lives inside a ``multipart/related`` container
+    #: (typically an inline image referenced by ``cid:`` from the HTML body)
+    #: rather than a top-level attachment.
+    related: bool
+    #: The part's decoded bytes. Never present for a ``.msg``-sourced
+    #: attachment — see ``msg_parser.py``.
+    content: bytes
+
+
+class MsgAttachment(TypedDict):
+    """Attachment metadata read out of an Outlook ``.msg`` file.
+
+    Filename/type/size only — ``msg_parser.py`` never reads attachment
+    content bytes.
+    """
+
+    filename: str
+    contentType: str
+    size: int
+
+
+class MsgParseResult(TypedDict):
+    """Return shape of ``phish_signals.msg_parser.msg_to_raw_email``."""
+
+    rawEmail: str
+    attachments: list[MsgAttachment]
+
+
 class ReceivedHop(TypedDict):
     """One parsed ``Received:`` header."""
 
@@ -311,12 +349,51 @@ class Recommendation(TypedDict):
     text: str
 
 
+class _CombinedResultRequired(TypedDict):
+    score: int
+    verdict: Verdict
+    confidence: Confidence
+    #: Every signal, worst first.
+    signals: list[Signal]
+    benignSignals: list[Signal]
+    categories: list[CategoryScore]
+    urls: list[UrlAnalysis]
+    recommendations: list[Recommendation]
+    mitre: list[MitreTechnique]
+    iocs: list[Ioc]
+    sigmaRule: str
+    kqlQuery: str
+    authAvailable: bool
+    authPassed: bool
+
+
+class CombinedResult(_CombinedResultRequired, total=False):
+    """Return shape of ``phish_signals.combine_results.combine_results``.
+
+    The assembled result of a full analysis — everything else this package
+    produces is a piece of what ends up here.
+    """
+
+    receivedChain: ReceivedChainAnalysis | None
+    linkMismatches: list[LinkMismatch]
+    messageInfo: MessageInfo | None
+    attachments: list[AttachmentSummary]
+    imageCount: int
+    #: How many embedded/attached images were actually run through the QR
+    #: decoder (bounded — see qr_check.py).
+    qrImagesScanned: int
+    #: Pretty-printed JSON of this same result, for feeding a SOAR or
+    #: ticketing system. Set last, after every other field.
+    jsonReport: str
+
+
 __all__ = [
     "CATEGORY_LABELS",
     "AttachmentSummary",
     "AuthCheckResult",
     "Availability",
     "CategoryScore",
+    "CombinedResult",
     "Confidence",
     "EvidenceCategory",
     "HeaderAnomalyResult",
@@ -327,7 +404,10 @@ __all__ = [
     "LinkMismatch",
     "MessageInfo",
     "MitreTechnique",
+    "MsgAttachment",
+    "MsgParseResult",
     "ParsedEmail",
+    "RawAttachmentMeta",
     "ReceivedChainAnalysis",
     "ReceivedHop",
     "Recommendation",

@@ -16,7 +16,25 @@ requires-python = ">=3.10"
 # alongside typescript/); the PyPI distribution name is the plain
 # "phish-signals" above, so `pip install phish-signals` matches the repo name
 # without a redundant py- prefix.
-dependencies = []
+#
+# Every module through the checks/scoring/output layer is stdlib-only by
+# design (see each module's own docstring). These three are the deliberate,
+# narrow exception: parsing an Outlook .msg's compound-file structure and
+# decoding embedded PNG/JPEG pixel data plus a QR payload out of them is not
+# something worth hand-rolling when a mature library already exists for it —
+# msg_parser.py and qr_check.py's own docstrings named these as the intended
+# equivalents to the TypeScript reference's @kenjiuno/msgreader and jsqr/
+# pngjs/jpeg-js before either module was ported. pyzbar (the docstrings'
+# other named option) was tried and rejected: it fails at import time, not
+# just at call time, on any machine without the system zbar shared library
+# already installed, which would take down the whole package's importability
+# rather than just QR scanning. opencv-python-headless has no such system
+# dependency — pip alone is enough.
+dependencies = [
+    "extract-msg>=0.54",
+    "opencv-python-headless>=4.9",
+    "pillow>=10",
+]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Information Technology",
@@ -97,3 +115,14 @@ ignore = [
 # escapes because the point of the table is what they look like, which an
 # escape sequence hides from the reader reviewing it.
 "src/phish_signals/punycode.py" = ["RUF001"]
+
+# RUF003 warns about the same kind of visually-confusable characters, but in
+# a comment rather than a string literal. url_check.py's docstring-style
+# comment above the homograph/confusable checks, and the test that exercises
+# them, both intentionally spell out a real Cyrillic homograph
+# (xn--pypal-4ve.com decoding to "pаypal.com") to explain what the detector
+# is catching — replacing the Cyrillic characters with Latin lookalikes
+# would silently turn the example into a non-homograph and defeat the point
+# of the comment.
+"src/phish_signals/url_check.py" = ["RUF003"]
+"tests/test_url_check.py" = ["RUF003"]

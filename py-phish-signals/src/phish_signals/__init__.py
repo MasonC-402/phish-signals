@@ -9,14 +9,11 @@ This module's role is the same as ``typescript/src/index.ts``: the public API
 surface. Everything a consumer needs is re-exported from here; the submodules
 underneath are internal layout, not a contract.
 
-Ported so far: shared types, domain helpers, punycode and homograph
-identification, input sanitizing, scoring, IOC handling, the rule engine, and
-content checks (urgency language, credential/financial/authority-impersonation
-phrase detection, generic greetings, display-name spoofing, excessive
-capitalization, link-text deception, dangerous link schemes). The remaining
-checks, aggregation, and parsing layers exist as documented stubs and export
-nothing yet; :data:`IMPLEMENTED_MODULES` is the machine-readable version of
-that status.
+Every module through the checks/scoring/output layer is stdlib-only.
+``msg_parser`` and ``qr_check`` are the two deliberate exceptions — see
+``pyproject.toml`` for why ``extract-msg``, ``pillow`` and
+``opencv-python-headless`` are this otherwise-dependency-free package's only
+runtime dependencies.
 
 The rule layer (:mod:`phish_signals.rules`) gives the detection logic a name,
 so it can be listed, disabled, replaced, or extended by consumers. The
@@ -35,7 +32,25 @@ spelling is part of the contract rather than an internal style choice.
 
 from __future__ import annotations
 
-# Content checks — phrase-list heuristics, display-name spoofing, link text.
+# Import order below is alphabetical by module (ruff's isort rule enforces
+# this and will re-sort on every `ruff format`, so it's not maintained by
+# hand). The thematic grouping that mirrors typescript/src/index.ts's
+# sectioning — shared types, domain helpers, input handling, checks,
+# scoring/output, parsing — lives in __all__ instead, where RUF022 is
+# disabled specifically so that grouping can be preserved (see pyproject.toml).
+from .attachment_check import (
+    ARCHIVE_EXTENSIONS,
+    DISK_IMAGE_EXTENSIONS,
+    EXECUTABLE_EXTENSIONS,
+    MACRO_EXTENSIONS,
+    SCRIPT_SHORTCUT_EXTENSIONS,
+    check_attachments,
+    extname,
+    has_double_extension,
+    has_executable_mime_mismatch,
+)
+from .auth_check import check_authentication
+from .combine_results import AnalysisInput, combine_results
 from .content_check import (
     CONTENT_RULESET,
     KNOWN_BRAND_NAMES,
@@ -43,19 +58,27 @@ from .content_check import (
     check_dangerous_schemes,
     check_link_text,
 )
-
-# Registrable-domain / brand-list utilities.
 from .domains import (
     KNOWN_BRAND_DOMAINS,
     brand_label,
     normalize_confusables,
     registrable_domain,
 )
-
-# Indicator extraction and defanging.
+from .email_parser import (
+    extract_hrefs,
+    extract_urls,
+    find_dangerous_schemes,
+    find_link_mismatches,
+    looks_like_raw_email,
+    parse_email,
+)
+from .header_anomalies import check_header_anomalies
+from .header_parser import ParsedHeaders, parse_header_text
 from .iocs import defang, extract_iocs, parse_ioc_text, refang
-
-# Punycode decoding and homograph/confusable-script detection.
+from .json_export import build_json_export
+from .kql_query import build_kql_query
+from .mitre import TECHNIQUES, map_techniques, technique_url
+from .msg_parser import msg_to_raw_email
 from .punycode import (
     decode_hostname,
     decode_label,
@@ -63,8 +86,16 @@ from .punycode import (
     is_whole_script_confusable,
     scripts_of,
 )
-
-# Rule layer: named detection units, custom rules, declarative rulesets.
+from .qr_check import (
+    MAX_QR_IMAGE_BYTES,
+    MAX_QR_IMAGES,
+    MAX_QR_PIXELS,
+    SCAN_TIME_BUDGET_MS,
+    DecodableImage,
+    scan_images_for_qr_codes,
+)
+from .received_chain import analyze_received_chain, is_private_ip
+from .recommendations import build_recommendations
 from .rules import (
     Rule,
     RuleContext,
@@ -80,16 +111,13 @@ from .rules import (
     load_ruleset,
     parse_rule,
 )
-
-# Input handling.
 from .sanitize import (
     DEFAULT_MAX_LENGTH,
     ValidationError,
     sanitize_input,
     strip_dangerous_unicode,
 )
-
-# Scoring.
+from .sigma_rule import build_sigma_rule, subject_keywords
 from .signals import (
     CORROBORATION_RATE,
     MAX_CATEGORY_SCORE,
@@ -98,14 +126,13 @@ from .signals import (
     assess_confidence,
     score_signals,
 )
-
-# Shared shapes, plus the CATEGORY_LABELS constant.
 from .types import (
     CATEGORY_LABELS,
     AttachmentSummary,
     AuthCheckResult,
     Availability,
     CategoryScore,
+    CombinedResult,
     Confidence,
     EvidenceCategory,
     HeaderAnomalyResult,
@@ -116,7 +143,10 @@ from .types import (
     LinkMismatch,
     MessageInfo,
     MitreTechnique,
+    MsgAttachment,
+    MsgParseResult,
     ParsedEmail,
+    RawAttachmentMeta,
     ReceivedChainAnalysis,
     ReceivedHop,
     Recommendation,
@@ -129,17 +159,61 @@ from .types import (
     Verdict,
     ZipEntry,
 )
+from .url_check import (
+    DANGEROUS_DOWNLOAD_EXTENSIONS,
+    EXPECTED_PORTS,
+    MAX_URLS_ANALYZED,
+    SUSPICIOUS_TLDS,
+    URL_SHORTENERS,
+    analyze_url,
+    brand_impersonation,
+    check_qr_codes,
+    check_typosquat,
+    check_urls,
+    is_ip_literal,
+    levenshtein,
+    summarize_url_signals,
+)
+from .zip_check import (
+    MAX_ENTRIES_LISTED,
+    ZipListResult,
+    list_zip_entries,
+    looks_like_zip,
+)
 
 __version__ = "0.1.0"
 
 #: Which submodules actually have an implementation behind them, as opposed to
 #: a documented stub. Exposed so a caller can branch on the state of the port
-#: instead of discovering it through an ``ImportError``; it shrinks to
-#: irrelevance as the remaining modules land.
-IMPLEMENTED_MODULES: frozenset[str] = frozenset({
-    "types", "domains", "punycode", "sanitize", "signals",
-    "iocs", "rules", "content_check",
-})
+#: instead of discovering it through an ``ImportError``.
+IMPLEMENTED_MODULES: frozenset[str] = frozenset(
+    {
+        "types",
+        "domains",
+        "punycode",
+        "sanitize",
+        "header_parser",
+        "signals",
+        "iocs",
+        "rules",
+        "content_check",
+        "url_check",
+        "auth_check",
+        "received_chain",
+        "header_anomalies",
+        "attachment_check",
+        "mitre",
+        "zip_check",
+        "recommendations",
+        "sigma_rule",
+        "kql_query",
+        "json_export",
+        "combine_results",
+        "email_parser",
+        "msg_parser",
+        "qr_check",
+    }
+)
 
 __all__ = [
     # Version and port status
@@ -151,6 +225,7 @@ __all__ = [
     "AuthCheckResult",
     "Availability",
     "CategoryScore",
+    "CombinedResult",
     "Confidence",
     "EvidenceCategory",
     "HeaderAnomalyResult",
@@ -161,7 +236,10 @@ __all__ = [
     "LinkMismatch",
     "MessageInfo",
     "MitreTechnique",
+    "MsgAttachment",
+    "MsgParseResult",
     "ParsedEmail",
+    "RawAttachmentMeta",
     "ReceivedChainAnalysis",
     "ReceivedHop",
     "Recommendation",
@@ -186,22 +264,50 @@ __all__ = [
     "scripts_of",
     # Input handling
     "DEFAULT_MAX_LENGTH",
+    "ParsedHeaders",
     "ValidationError",
+    "parse_header_text",
     "sanitize_input",
     "strip_dangerous_unicode",
-    # Scoring
-    "CORROBORATION_RATE",
-    "MAX_CATEGORY_SCORE",
-    "SEVERITY_POINTS",
-    "SEVERITY_RANK",
-    "assess_confidence",
-    "score_signals",
-    # Content checks
+    # Checks
+    "ARCHIVE_EXTENSIONS",
     "CONTENT_RULESET",
+    "DANGEROUS_DOWNLOAD_EXTENSIONS",
+    "DISK_IMAGE_EXTENSIONS",
+    "EXECUTABLE_EXTENSIONS",
+    "EXPECTED_PORTS",
     "KNOWN_BRAND_NAMES",
+    "MACRO_EXTENSIONS",
+    "MAX_ENTRIES_LISTED",
+    "MAX_URLS_ANALYZED",
+    "SCRIPT_SHORTCUT_EXTENSIONS",
+    "SUSPICIOUS_TLDS",
+    "TECHNIQUES",
+    "URL_SHORTENERS",
+    "ZipListResult",
+    "analyze_received_chain",
+    "analyze_url",
+    "brand_impersonation",
+    "check_attachments",
+    "check_authentication",
     "check_content",
     "check_dangerous_schemes",
+    "check_header_anomalies",
     "check_link_text",
+    "check_qr_codes",
+    "check_typosquat",
+    "check_urls",
+    "extname",
+    "has_double_extension",
+    "has_executable_mime_mismatch",
+    "is_ip_literal",
+    "is_private_ip",
+    "levenshtein",
+    "list_zip_entries",
+    "looks_like_zip",
+    "map_techniques",
+    "summarize_url_signals",
+    "technique_url",
     # Rules
     "Rule",
     "RuleContext",
@@ -216,9 +322,36 @@ __all__ = [
     "load_rule_file",
     "load_ruleset",
     "parse_rule",
-    # IOCs
+    # Scoring, aggregation, and output formatting
+    "AnalysisInput",
+    "CORROBORATION_RATE",
+    "MAX_CATEGORY_SCORE",
+    "SEVERITY_POINTS",
+    "SEVERITY_RANK",
+    "assess_confidence",
+    "build_json_export",
+    "build_kql_query",
+    "build_recommendations",
+    "build_sigma_rule",
+    "combine_results",
     "defang",
     "extract_iocs",
     "parse_ioc_text",
     "refang",
+    "score_signals",
+    "subject_keywords",
+    # Parsing
+    "DecodableImage",
+    "MAX_QR_IMAGES",
+    "MAX_QR_IMAGE_BYTES",
+    "MAX_QR_PIXELS",
+    "SCAN_TIME_BUDGET_MS",
+    "extract_hrefs",
+    "extract_urls",
+    "find_dangerous_schemes",
+    "find_link_mismatches",
+    "looks_like_raw_email",
+    "msg_to_raw_email",
+    "parse_email",
+    "scan_images_for_qr_codes",
 ]
