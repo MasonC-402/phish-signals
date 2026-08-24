@@ -1,5 +1,10 @@
 # Shared rule definitions
 
+This file covers the JSON rule *format* — the data a rule file is written
+as. For the engine that runs rules (`Rule`, `RuleContext`, `Ruleset`, and
+what running a ruleset actually guarantees), see
+[CONCEPTS.md](CONCEPTS.md) instead.
+
 Language-neutral phishing rules, as data. Both implementations now have a
 declarative rule loader capable of reading this format — `python/`'s
 (`phish_signals.rules`) and, as of the TypeScript rule engine port,

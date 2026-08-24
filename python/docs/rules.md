@@ -3,6 +3,14 @@
 The rules engine gives the detection logic in phish-signals a name, so it can
 be listed, disabled, replaced, or extended by consumers of the library.
 
+This page is the Python API surface — imports, class signatures, code
+examples. For what a `Rule`/`RuleContext`/`Ruleset` actually mean, why `id`
+and `emits` are separate, and what the engine guarantees beyond a bare loop
+over rules, see [`../../rules/CONCEPTS.md`](../../rules/CONCEPTS.md), which
+covers both implementations at once since the concepts are identical. For the
+declarative JSON rule format, see
+[`../../rules/README.md`](../../rules/README.md).
+
 **Where it lives:** `phish_signals.rules` — three modules behind one
 `__init__.py`:
 
@@ -104,29 +112,24 @@ rules = load_rule_file("path/to/rules.json")
 ruleset = load_ruleset("path/to/rules/", name="acme")
 ```
 
-## Concepts
+## Concepts, in Python
+
+See [`../../rules/CONCEPTS.md`](../../rules/CONCEPTS.md) for what each of
+these means and guarantees. This section is just the Python signatures.
 
 ### Rule
 
-A frozen dataclass with five fields:
-
-| Field | Type | Purpose |
-|-------|------|---------|
-| `id` | `str` | Namespaced identifier, e.g. `"core.urgency_language"`. Must match `<namespace>.<name>`, lowercase. |
-| `emits` | `frozenset[str]` | Signal IDs this rule may produce. Declared up front for collision detection. |
-| `evaluate` | `Callable[[RuleContext], list[Signal]]` | The detection logic. |
-| `tags` | `frozenset[str]` | Free-form labels for filtering — `"content"`, `"header"`, `"experimental"`. |
-| `description` | `str` | One-line summary shown when listing a ruleset. |
-
-**Two identifiers, deliberately distinct:**
-
-- `Rule.id` — registry identity. What you disable, replace, or filter on. Never appears in output.
-- `Rule.emits` — the `Signal.id` values the rule may produce. These appear in output and must stay stable across implementations because conformance vectors name them.
+```python
+@dataclass(frozen=True)
+class Rule:
+    id: str
+    emits: frozenset[str]
+    evaluate: Callable[[RuleContext], list[Signal]]
+    tags: frozenset[str] = frozenset()
+    description: str = ""
+```
 
 ### RuleContext
-
-Everything a rule is allowed to look at. Assembled once before any rule runs
-from work the pipeline has already done. Nothing here performs I/O.
 
 ```python
 @dataclass(frozen=True)
@@ -138,36 +141,12 @@ class RuleContext:
     header_anomalies: HeaderAnomalyResult | None = None
 ```
 
-Cached properties provide derived data rules commonly need:
-
-| Property | Type | What it is |
-|----------|------|------------|
-| `scan_text_lower` | `str` | Subject + text body + de-tagged HTML, lowercased |
-| `body_text_lower` | `str` | Text body only, lowercased |
-| `html_body_lower` | `str` | HTML body, lowercased |
-| `subject_lower` | `str` | Subject line, lowercased |
-| `sender_domain` | `str \| None` | Registrable domain of the From address |
-| `reply_to_domain` | `str \| None` | Registrable domain of Reply-To |
-| `return_path_domain` | `str \| None` | Registrable domain of Return-Path |
-| `link_hostnames` | `frozenset[str]` | Hostnames from analyzed URLs |
-| `link_domains` | `frozenset[str]` | Registrable domains of link hostnames |
+Cached properties: `scan_text_lower`, `body_text_lower`, `html_body_lower`,
+`subject_lower` (all `str`); `sender_domain`, `reply_to_domain`,
+`return_path_domain` (all `str | None`); `link_hostnames`, `link_domains`
+(both `frozenset[str]`).
 
 ### Ruleset
-
-An ordered, immutable collection of rules. Order matters: `score_signals()`
-deduplicates by signal ID first-one-wins, so ruleset order decides which of
-two same-ID signals survives.
-
-**Validation** runs at construction time:
-
-- Duplicate rule IDs are rejected
-- Two rules claiming the same signal ID are rejected (this is the silent
-  failure the whole design is built around — without this guard, the second
-  rule would run, produce a signal, and have it dropped at scoring time with
-  no error anywhere)
-- Severity overrides for signals nobody emits are rejected
-
-**Derivation** — every method returns a new ruleset:
 
 ```python
 # Add rules
@@ -187,17 +166,6 @@ quieter = ruleset.with_severity_overrides({"urgency_language": "info"})
 
 ### Engine
 
-`evaluate_ruleset()` runs every rule in a ruleset against a context and
-collects the signals. It adds three things over a bare list comprehension:
-
-1. **Fault isolation** — a rule that raises produces a diagnostic, not a
-   crash. The other rules still run.
-2. **Emission checking** — a signal whose ID the rule never declared in
-   `emits` is dropped. An undeclared ID would bypass the collision check
-   and could silently suppress another rule's finding.
-3. **Severity overrides** — applied here so a consumer can retune a signal
-   without touching the rule that emits it.
-
 ```python
 from phish_signals.rules import evaluate_ruleset, format_diagnostics
 
@@ -214,97 +182,19 @@ rather than diagnostics.
 
 ## Declarative rule format
 
-### File structure
-
-```json
-{
-  "version": 1,
-  "namespace": "core",
-  "rules": [...]
-}
-```
-
-- `version` — must be `1`. A file declaring anything else is rejected.
-- `namespace` — prefixed to each rule's ID: a rule with `"id": "foo"` in
-  namespace `"core"` becomes `core.foo`.
-
-### Rule fields
-
-| Field | Required | Type | Notes |
-|-------|----------|------|-------|
-| `id` | yes | `string` | Local ID, namespaced automatically |
-| `signal_id` | no | `string` | Defaults to `id`. Use when the signal ID differs from the rule ID. |
-| `category` | yes | `string` | One of: `authentication`, `identity`, `infrastructure`, `payload`, `social` |
-| `label` | yes | `string` | Human-readable name shown in reports |
-| `severity` | yes | `string \| object` | See below |
-| `match` | yes | `object` | See below |
-| `detail` | yes | `string` | Template with `{hits}` and `{hit_count}` placeholders |
-| `mitre` | no | `string[]` | MITRE ATT&CK technique IDs |
-| `tags` | no | `string[]` | Free-form labels for filtering |
-| `benign` | no | `boolean` | `true` if this argues the message is legitimate |
-| `description` | no | `string` | One-line summary |
-
-**Severity** — either a plain string (`"medium"`) or an object with
-escalation:
-
-```json
-{ "base": "low", "escalate_to": "medium", "when_hits_at_least": 3 }
-```
-
-**Match** — currently supports `phrases` only:
-
-```json
-{
-  "type": "phrases",
-  "field": "scan_text",
-  "any_of": ["act now", "urgent", "final notice"]
-}
-```
-
-- `field` — which text to scan: `scan_text` (default, subject + text +
-  de-tagged HTML), `body_text`, `html_body`, `subject`
-- `any_of` — phrases must be lowercase (they're matched against
-  pre-lowercased text)
-
-**Regular expressions are deliberately excluded.** Python's `re` has no
-timeout and its engine backtracks, so a user-supplied pattern plus crafted
-input is a denial of service. Patterns are only available in code rules,
-where whoever wrote the pattern is whoever ships it and owns the risk.
-
-### Validation
-
-Strict by design — unknown keys are errors, not warnings. A typo'd
-`"severty"` that loads quietly gives you a rule running at the wrong weight
-with nothing to indicate it.
-
-### Detail templates
-
-Two substitutions:
-
-- `{hits}` — first three matched phrases, double-quoted: `"act now", "urgent", "final notice"`
-- `{hit_count}` — total number of matched phrases
-
-Uses plain string replacement (not `str.format()`) to avoid attribute
-traversal attacks (`{0.__class__}`) and to match the TypeScript behavior
-exactly.
+The JSON format itself (file structure, rule field reference, the
+severity/match schema, validation rules, detail-template substitution, and
+why regular expressions are deliberately excluded from it) is fully
+documented once, language-neutrally, in
+[`../../rules/README.md`](../../rules/README.md) — it's the same format
+whichever implementation is loading it. This page only shows the Python
+loading calls, above.
 
 ## Scoring interaction
 
-The rules engine **does not score**. It produces signals; scoring lives in
-`phish_signals.signals.score_signals()` and stays there.
-
-Two properties worth knowing:
-
-1. **Signal IDs are the namespace that matters.** Scoring deduplicates by
-   `Signal.id`, keeping the first. A custom rule emitting a built-in's ID
-   suppresses it. `Ruleset` refuses to be built when two rules claim one
-   signal ID — use `Ruleset.replace_rule()` when the override is intended.
-
-2. **One rule cannot swing a verdict alone.** A category's score caps at
-   55 and "High Risk" starts at 60, so even a rule firing `critical`
-   reaches Medium Risk on its own. Getting to High Risk takes evidence on
-   two independent categories. A miscalibrated custom rule has a bounded
-   blast radius by construction.
+Fully covered in [`../../rules/CONCEPTS.md`](../../rules/CONCEPTS.md#scoring-interaction)
+— it's identical in both implementations. In short: the rules engine does
+not score anything itself; that stays in `phish_signals.signals.score_signals()`.
 
 ## Built-in content rules
 
