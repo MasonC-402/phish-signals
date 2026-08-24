@@ -1,0 +1,17 @@
+{
+    "module": "rules",
+    "function": "",
+    "cases": [
+        {
+            "name": "scan text with urgency language",
+            "input": {
+                "scan_text": "Your account will be suspended if you do not act now. This is your last warning. Please verify your account immediately."
+            },
+            "expect": [
+                {
+                    
+                }
+            ]
+        }
+    ]
+}

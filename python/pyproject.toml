@@ -6,7 +6,7 @@ readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [
-    { name = "MasonC-402 | Security Analyst/Software Engineer/Researcher", email = "8381464+MasonC-402@users.noreply.github.com" },
+    { name = "Mason C.", email = "admin@farksecurity.com" },
 ]
 requires-python = ">=3.10"
 # Independent Python implementation of the same detection engine published to
