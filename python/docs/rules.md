@@ -64,8 +64,10 @@ scored = score_signals(run["signals"])
 ### Writing a declarative JSON rule
 
 Most content rules are a phrase list and a severity. Write them as data
-instead of code so the phrase lists are defined once (the TypeScript loader
-is planned but not yet ported):
+instead of code so the phrase lists are defined once — the TypeScript rule
+layer (`typescript/src/rules/`) now has a matching loader, verified to
+produce byte-identical signals from the same rule file, though
+`checkContent` isn't wired to load from one yet:
 
 ```json
 {

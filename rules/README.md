@@ -1,10 +1,23 @@
 # Shared rule definitions
 
-Language-neutral phishing rules, as data. The Python implementation
-(`python/`) loads the files in this directory via its declarative
-rule loader. The TypeScript implementation (`typescript/`) still uses inline
-phrase arrays; porting its content check to load from this directory is
-planned but not yet done.
+Language-neutral phishing rules, as data. Both implementations now have a
+declarative rule loader capable of reading this format — `python/`'s
+(`phish_signals.rules`) and, as of the TypeScript rule engine port,
+`typescript/`'s (`typescript/src/rules/`) — and the two have been verified to
+produce byte-identical signals from the same rule data.
+
+Two things this directory does not yet deliver on, despite that:
+
+- **`contentCheck.ts` isn't wired to the loader yet.** It still uses inline
+  phrase arrays, same as before the loader existed. Only `content_check.py`
+  actually loads declarative rules today.
+- **The shared rule data doesn't live here yet.** The one declarative rule
+  file that exists (`content.json`, the four phrase-list content rules) is
+  bundled inside the Python package at
+  `python/src/phish_signals/rules/data/content.json`, not in this directory —
+  so despite the loader working in both languages, there is currently nothing
+  in `rules/` for either of them to load, and the Python and TypeScript phrase
+  lists still have to be kept in sync by hand.
 
 The goal: a phrase list written as data is added once and is live in both
 languages immediately, with nothing to keep in sync. Until the TypeScript

@@ -92,14 +92,20 @@ normal test run — there's no separate command.
 
 ## Coverage
 
-Only the pure, zero-runtime-dependency layer is vectored so far —
-`domains`, `punycode`, `iocs`, and `signals`'s `scoreSignals`. The larger
-surface (`urlCheck`, `authCheck`, `attachmentCheck`, `combineResults`, the
-parsers, ...) has no vectors yet. Both implementations now satisfy every
-vector here.
+The pure, zero-runtime-dependency layer is vectored — `domains`, `punycode`,
+`iocs`, and `signals`'s `scoreSignals` — plus `contentCheck`'s `checkContent`
+(the first vector into the checks layer, and the first to use the multi-arg
+`args` form) and the rule loader's `quoteHits`/`renderDetail` helpers. The
+rest of the checks layer (`urlCheck`, `authCheck`, `attachmentCheck`,
+`combineResults`, the parsers, ...) has no vectors yet, and neither does the
+rule engine's own internals (`Rule`, `RuleContext`, `Ruleset`,
+`evaluateRuleset`) — see this directory's git history for why those aren't
+vectorable directly: they hold or take a live callable, not JSON-shaped data.
+Both implementations satisfy every vector here.
 
 Coverage is thinner than the passing count suggests, and it is worth being
-precise about that: 26 cases is enough to pin the documented quirks, not
+precise about that: 42 cases is enough to pin the documented quirks and one
+real slice of the checks layer, not
 enough to catch a subtly wrong port. Two areas where the languages differ by
 default, both found by differential-testing the Python port against the
 TypeScript one rather than by any vector here, are worth vectors of their own
