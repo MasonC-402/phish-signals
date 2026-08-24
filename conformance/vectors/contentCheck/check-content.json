@@ -1,0 +1,174 @@
+{
+  "module": "contentCheck",
+  "function": "checkContent",
+  "cases": [
+    {
+      "name": "no body, no from — nothing to scan",
+      "args": [null, null],
+      "expect": { "signals": [] }
+    },
+    {
+      "name": "ordinary benign email produces no signals",
+      "args": ["Thanks for your order, here is your receipt.", "billing@realstore.com"],
+      "expect": { "signals": [] }
+    },
+    {
+      "name": "single urgency phrase stays at low severity",
+      "args": ["Please act now to keep your account.", null],
+      "expect": {
+        "signals": [
+          {
+            "id": "urgency_language",
+            "category": "social",
+            "severity": "low",
+            "label": "Urgency / Pressure Language",
+            "detail": "Contains phrases designed to rush you past thinking it through: \"act now\". Manufactured time pressure is the most consistent feature of phishing.",
+            "mitre": ["T1566"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "three or more urgency phrases escalate to medium severity",
+      "args": ["Your account will be suspended if you do not act now. This is your last warning.", null],
+      "expect": {
+        "signals": [
+          {
+            "id": "urgency_language",
+            "category": "social",
+            "severity": "medium",
+            "label": "Urgency / Pressure Language",
+            "detail": "Contains phrases designed to rush you past thinking it through: \"act now\", \"account will be suspended\", \"last warning\". Manufactured time pressure is the most consistent feature of phishing.",
+            "mitre": ["T1566"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "credential request phrase",
+      "args": ["Please enter your password to continue.", null],
+      "expect": {
+        "signals": [
+          {
+            "id": "credential_request",
+            "category": "social",
+            "severity": "medium",
+            "label": "Credential Request",
+            "detail": "Asks for login credentials or personal verification: \"enter your password\". Legitimate organizations do not ask you to confirm a password by email.",
+            "mitre": ["T1566.002", "T1598.003"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "financial request phrase",
+      "args": ["Please send payment via wire transfer today.", null],
+      "expect": {
+        "signals": [
+          {
+            "id": "financial_request",
+            "category": "social",
+            "severity": "medium",
+            "label": "Financial Request",
+            "detail": "References payment, transfer, or a change to financial details: \"wire transfer\". Changed banking details arriving by email is the core of invoice fraud.",
+            "mitre": ["T1566"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "authority impersonation and secrecy request",
+      "args": ["This is your CEO, please keep this confidential.", null],
+      "expect": {
+        "signals": [
+          {
+            "id": "authority_impersonation",
+            "category": "social",
+            "severity": "medium",
+            "label": "Authority Impersonation / Secrecy Request",
+            "detail": "Claims executive or IT authority, or asks you to keep it quiet: \"this is your ceo\", \"keep this confidential\". A request for secrecy exists to stop you verifying it through a second channel.",
+            "mitre": ["T1656"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "generic greeting",
+      "args": ["Dear Customer, please review your statement.", null],
+      "expect": {
+        "signals": [
+          {
+            "id": "generic_greeting",
+            "category": "social",
+            "severity": "low",
+            "label": "Generic Greeting",
+            "detail": "Addresses you generically rather than by name. An organization that holds an account for you generally knows your name."
+          }
+        ]
+      }
+    },
+    {
+      "name": "display name claims a known brand the actual address doesn't contain",
+      "args": ["hello world", "\"PayPal Support\" <security@totally-different-domain.tk>"],
+      "expect": {
+        "signals": [
+          {
+            "id": "display_name_brand_spoof",
+            "category": "identity",
+            "severity": "high",
+            "label": "Display Name Spoofing",
+            "detail": "The sender name says \"paypal\" but the actual address is security@totally-different-domain.tk. Most mail clients show only the name, so this is what the recipient sees.",
+            "mitre": ["T1656"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "display name is itself an address at a different domain — produces both the brand spoof and the address spoof signal",
+      "args": ["hello world", "\"support@paypal.com\" <attacker@evil.tk>"],
+      "expect": {
+        "signals": [
+          {
+            "id": "display_name_brand_spoof",
+            "category": "identity",
+            "severity": "high",
+            "label": "Display Name Spoofing",
+            "detail": "The sender name says \"paypal\" but the actual address is attacker@evil.tk. Most mail clients show only the name, so this is what the recipient sees.",
+            "mitre": ["T1656"]
+          },
+          {
+            "id": "display_name_address_spoof",
+            "category": "identity",
+            "severity": "high",
+            "label": "Sender Address Spoofing",
+            "detail": "The display name shows an address at \"paypal.com\", but the message was actually sent from \"evil.tk\".",
+            "mitre": ["T1656"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "excessive capitalization also incidentally hits the urgency phrase list ('urgent')",
+      "args": ["THIS IS AN URGENT ALERT ABOUT YOUR ACCOUNT NOW PLEASE READ CAREFULLY", null],
+      "expect": {
+        "signals": [
+          {
+            "id": "urgency_language",
+            "category": "social",
+            "severity": "low",
+            "label": "Urgency / Pressure Language",
+            "detail": "Contains phrases designed to rush you past thinking it through: \"urgent\". Manufactured time pressure is the most consistent feature of phishing.",
+            "mitre": ["T1566"]
+          },
+          {
+            "id": "excessive_capitalization",
+            "category": "social",
+            "severity": "low",
+            "label": "Excessive Capitalization",
+            "detail": "Unusually heavy use of all-caps words, typically used to manufacture alarm."
+          }
+        ]
+      }
+    }
+  ]
+}

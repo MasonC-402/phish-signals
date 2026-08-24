@@ -1,0 +1,16 @@
+{
+  "module": "rules",
+  "function": "renderDetail",
+  "cases": [
+    {
+      "name": "no placeholders in template — returned unchanged",
+      "args": ["No placeholders here.", ["act now"]],
+      "expect": "No placeholders here."
+    },
+    {
+      "name": "{hits} and {hit_count} both substituted, {hits} appearing twice replaces every occurrence — this is why renderDetail must use replaceAll, not replace",
+      "args": ["Contains phrases: {hits}, count {hit_count}. Twice: {hits}", ["act now", "urgent"]],
+      "expect": "Contains phrases: \"act now\", \"urgent\", count 2. Twice: \"act now\", \"urgent\""
+    }
+  ]
+}

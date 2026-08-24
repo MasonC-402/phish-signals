@@ -45,11 +45,15 @@ def _collect_cases() -> list[pytest.param]:
         module_name = vector_file["module"]
         func_name = vector_file["function"]
         for case in vector_file["cases"]:
+            # Most vectored functions take one argument, expressed as
+            # "input"; a few (checkContent, ...) take more than one and use
+            # "args" instead — see conformance/README.md's vector format.
+            args = case["args"] if "args" in case else [case["input"]]
             cases.append(
                 pytest.param(
                     module_name,
                     func_name,
-                    case["input"],
+                    args,
                     case["expect"],
                     id=f"{module_name}.{func_name}::{case['name']}",
                 )
@@ -58,10 +62,10 @@ def _collect_cases() -> list[pytest.param]:
 
 
 @pytest.mark.parametrize(
-    "module_name, func_name, input_value, expected", _collect_cases()
+    "module_name, func_name, args, expected", _collect_cases()
 )
 def test_conformance(
-    module_name: str, func_name: str, input_value: object, expected: object
+    module_name: str, func_name: str, args: list[object], expected: object
 ) -> None:
     py_module_name = _camel_to_snake(module_name)
     try:
@@ -83,4 +87,4 @@ def test_conformance(
             f"not implemented yet"
         )
 
-    assert func(input_value) == expected
+    assert func(*args) == expected

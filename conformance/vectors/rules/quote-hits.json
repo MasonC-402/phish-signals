@@ -1,0 +1,13 @@
+{
+  "module": "rules",
+  "function": "quoteHits",
+  "cases": [
+    { "name": "no hits", "input": [], "expect": "\"\"" },
+    { "name": "single hit", "input": ["act now"], "expect": "\"act now\"" },
+    {
+      "name": "more than three hits — only the first three are rendered",
+      "input": ["act now", "urgent", "last warning", "final notice"],
+      "expect": "\"act now\", \"urgent\", \"last warning\""
+    }
+  ]
+}

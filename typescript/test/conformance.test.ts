@@ -16,6 +16,8 @@ import * as domains from '../src/domains';
 import * as punycode from '../src/punycode';
 import * as iocs from '../src/iocs';
 import * as signals from '../src/signals';
+import * as contentCheck from '../src/contentCheck';
+import * as rulesLoader from '../src/rules/loader';
 
 // One entry per module a vector file's "module" field can name. Extend this
 // as more modules gain conformance coverage — see the "Coverage" section of
@@ -25,16 +27,30 @@ import * as signals from '../src/signals';
 // modules also export plain constants (KNOWN_BRAND_DOMAINS,
 // SEVERITY_POINTS, ...) that aren't callable at all. Whether a given export
 // is actually a function is checked at dispatch time below, not here.
+//
+// "rules" maps to rules/loader.ts rather than a single rules.ts: the rule
+// layer is a directory of modules (types/engine/loader), and quoteHits /
+// renderDetail — the only pieces of it that are pure JSON-in/JSON-out
+// functions, as opposed to something holding a live Rule callable — live in
+// loader.ts. See conformance/README.md and rules/README.md for why the rest
+// of the rule layer (Rule, RuleContext, Ruleset, evaluateRuleset) isn't
+// vectored directly.
 const MODULES: Record<string, Record<string, unknown>> = {
   domains,
   punycode,
   iocs,
   signals,
+  contentCheck,
+  rules: rulesLoader,
 };
 
 interface VectorCase {
   name: string;
-  input: unknown;
+  // Most vectored functions take one argument, expressed as "input"; a few
+  // (checkContent, ...) take more than one and use "args" instead — see
+  // conformance/README.md's vector format.
+  input?: unknown;
+  args?: unknown[];
   expect: unknown;
 }
 
@@ -67,10 +83,11 @@ for (const path of findVectorFiles(VECTORS_DIR)) {
       `${path}: '${vectorFile.function}' on module '${vectorFile.module}' is not a callable export — ` +
         `is it re-exported from src/index.ts, and listed in this file's MODULES map?`,
     );
-    const fn = target as (input: unknown) => unknown;
+    const fn = target as (...args: unknown[]) => unknown;
     for (const c of vectorFile.cases) {
       await t.test(c.name, () => {
-        assert.deepStrictEqual(fn(c.input), c.expect);
+        const args = c.args ?? [c.input];
+        assert.deepStrictEqual(fn(...args), c.expect);
       });
     }
   });

@@ -5,5 +5,5 @@ npm-debug.log*
 # compiles src/**/*.ts + test/**/*.ts in place (no outDir) so `node --test` can
 # run test/*.js directly. Both are built on demand, never checked in.
 /dist/
-/src/*.js
-/test/*.js
+/src/**/*.js
+/test/**/*.js
