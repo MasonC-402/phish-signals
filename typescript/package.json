@@ -1,6 +1,6 @@
 {
   "name": "@farksecurity/phish-signals",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "description": "Heuristic phishing-detection engine: URL/domain typosquat and homograph checks, SPF/DKIM/DMARC-aware header analysis, Received-chain spoofing checks, IOC defang/refang, MITRE ATT&CK mapping, Sigma rule generation, and parsing for raw .eml/.msg messages plus embedded QR codes.",
   "license": "MIT",
   "type": "commonjs",
