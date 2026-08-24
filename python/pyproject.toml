@@ -1,6 +1,6 @@
 [project]
 name = "phish-signals"
-version = "0.2.1"
+version = "0.2.2"
 description = "Heuristic phishing-detection engine: URL/domain typosquat and homograph checks, SPF/DKIM/DMARC-aware header analysis, Received-chain spoofing checks, IOC defang/refang, MITRE ATT&CK mapping, Sigma rule generation, and parsing for raw .eml/.msg messages plus embedded QR codes."
 readme = "README.md"
 license = "MIT"
@@ -68,6 +68,14 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/phish_signals"]
+
+# docs/rules.md already reaches the sdist for free (hatchling ships the whole
+# project tree by default there), but the wheel — what `pip install` actually
+# installs — only carries the `packages` above. Force-including it here is
+# what puts it inside site-packages/phish_signals/docs/rules.md instead of
+# leaving it reachable only via the sdist tarball or the GitHub repo.
+[tool.hatch.build.targets.wheel.force-include]
+"docs/rules.md" = "phish_signals/docs/rules.md"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -6,10 +6,10 @@ be listed, disabled, replaced, or extended by consumers of the library.
 This page is the Python API surface — imports, class signatures, code
 examples. For what a `Rule`/`RuleContext`/`Ruleset` actually mean, why `id`
 and `emits` are separate, and what the engine guarantees beyond a bare loop
-over rules, see [`../../rules/CONCEPTS.md`](../../rules/CONCEPTS.md), which
+over rules, see [`rules/CONCEPTS.md`](https://github.com/MasonC-402/phish-signals/blob/main/rules/CONCEPTS.md), which
 covers both implementations at once since the concepts are identical. For the
 declarative JSON rule format, see
-[`../../rules/README.md`](../../rules/README.md).
+[`rules/README.md`](https://github.com/MasonC-402/phish-signals/blob/main/rules/README.md).
 
 **Where it lives:** `phish_signals.rules` — three modules behind one
 `__init__.py`:
@@ -114,7 +114,7 @@ ruleset = load_ruleset("path/to/rules/", name="acme")
 
 ## Concepts, in Python
 
-See [`../../rules/CONCEPTS.md`](../../rules/CONCEPTS.md) for what each of
+See [`rules/CONCEPTS.md`](https://github.com/MasonC-402/phish-signals/blob/main/rules/CONCEPTS.md) for what each of
 these means and guarantees. This section is just the Python signatures.
 
 ### Rule
@@ -186,13 +186,13 @@ The JSON format itself (file structure, rule field reference, the
 severity/match schema, validation rules, detail-template substitution, and
 why regular expressions are deliberately excluded from it) is fully
 documented once, language-neutrally, in
-[`../../rules/README.md`](../../rules/README.md) — it's the same format
+[`rules/README.md`](https://github.com/MasonC-402/phish-signals/blob/main/rules/README.md) — it's the same format
 whichever implementation is loading it. This page only shows the Python
 loading calls, above.
 
 ## Scoring interaction
 
-Fully covered in [`../../rules/CONCEPTS.md`](../../rules/CONCEPTS.md#scoring-interaction)
+Fully covered in [`rules/CONCEPTS.md`](https://github.com/MasonC-402/phish-signals/blob/main/rules/CONCEPTS.md#scoring-interaction)
 — it's identical in both implementations. In short: the rules engine does
 not score anything itself; that stays in `phish_signals.signals.score_signals()`.
 
