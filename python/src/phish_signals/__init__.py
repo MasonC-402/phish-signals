@@ -32,6 +32,9 @@ spelling is part of the contract rather than an internal style choice.
 
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _installed_version
+
 # Import order below is alphabetical by module (ruff's isort rule enforces
 # this and will re-sort on every `ruff format`, so it's not maintained by
 # hand). The thematic grouping that mirrors typescript/src/index.ts's
@@ -181,7 +184,13 @@ from .zip_check import (
     looks_like_zip,
 )
 
-__version__ = "0.1.0"
+try:
+    # Read from installed package metadata rather than hardcoding, so this
+    # can never drift from pyproject.toml's version the way it silently had
+    # (this stayed "0.1.0" through two real PyPI releases).
+    __version__ = _installed_version("phish-signals")
+except PackageNotFoundError:  # pragma: no cover - only when running from an uninstalled checkout
+    __version__ = "0.0.0+unknown"
 
 #: Which submodules actually have an implementation behind them, as opposed to
 #: a documented stub. Exposed so a caller can branch on the state of the port
