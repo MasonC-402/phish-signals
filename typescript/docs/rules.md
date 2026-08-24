@@ -6,10 +6,10 @@ be listed, disabled, replaced, or extended by consumers of the library.
 This page is the TypeScript API surface — imports, class signatures, code
 examples. For what a `Rule`/`RuleContext`/`Ruleset` actually mean, why `id`
 and `emits` are separate, and what the engine guarantees beyond a bare loop
-over rules, see [`../../rules/CONCEPTS.md`](../../rules/CONCEPTS.md), which
+over rules, see [`rules/CONCEPTS.md`](https://github.com/MasonC-402/phish-signals/blob/main/rules/CONCEPTS.md), which
 covers both implementations at once since the concepts are identical. For the
 declarative JSON rule format, see
-[`../../rules/README.md`](../../rules/README.md).
+[`rules/README.md`](https://github.com/MasonC-402/phish-signals/blob/main/rules/README.md).
 
 **Not yet part of the published package's public API.** Everything below
 works if you're building against this repo directly, but
@@ -121,7 +121,7 @@ const ruleset = loadRuleset('path/to/rules/', 'acme');
 
 ## Concepts, in TypeScript
 
-See [`../../rules/CONCEPTS.md`](../../rules/CONCEPTS.md) for what each of
+See [`rules/CONCEPTS.md`](https://github.com/MasonC-402/phish-signals/blob/main/rules/CONCEPTS.md) for what each of
 these means and guarantees. This section is just the TypeScript signatures.
 
 ### Rule
@@ -206,13 +206,13 @@ The JSON format itself (file structure, rule field reference, the
 severity/match schema, validation rules, detail-template substitution, and
 why regular expressions are deliberately excluded from it) is fully
 documented once, language-neutrally, in
-[`../../rules/README.md`](../../rules/README.md) — it's the same format
+[`rules/README.md`](https://github.com/MasonC-402/phish-signals/blob/main/rules/README.md) — it's the same format
 whichever implementation is loading it. This page only shows the TypeScript
 loading calls, above.
 
 ## Scoring interaction
 
-Fully covered in [`../../rules/CONCEPTS.md`](../../rules/CONCEPTS.md#scoring-interaction)
+Fully covered in [`rules/CONCEPTS.md`](https://github.com/MasonC-402/phish-signals/blob/main/rules/CONCEPTS.md#scoring-interaction)
 — it's identical in both implementations. In short: the rules engine does
 not score anything itself; that stays in `scoreSignals()`.
 
@@ -220,7 +220,7 @@ not score anything itself; that stays in `scoreSignals()`.
 
 Unlike Python, **none of `contentCheck.ts`'s rules are routed through
 `Rule`/`Ruleset` yet** — they're inline logic in one function, same as before
-the rule engine existed (see [`../../rules/README.md`](../../rules/README.md)
+the rule engine existed (see [`rules/README.md`](https://github.com/MasonC-402/phish-signals/blob/main/rules/README.md)
 for that gap). The signal ids, categories, and severities below are still
 guaranteed identical to Python's by conformance vectors; there just isn't a
 `Rule.id` or a built-in `Ruleset` object for any of these to filter,
@@ -243,7 +243,7 @@ disable, or replace yet.
 Because `contentCheck.ts` doesn't expose a built-in `Ruleset` yet, there's no
 `CONTENT_RULESET.withRules(...)` equivalent to hook into today — that becomes
 possible once `contentCheck.ts` itself is ported onto `Rule`/`Ruleset` (the
-open item in [`../../rules/README.md`](../../rules/README.md)). Until then,
+open item in [`rules/README.md`](https://github.com/MasonC-402/phish-signals/blob/main/rules/README.md)). Until then,
 run your own ruleset alongside the built-in check and merge the signals
 yourself:
 
