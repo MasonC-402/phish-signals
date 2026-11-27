@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "namespace": "core",
+  "rules": [
+    {
+      "id": "urgency_language",
+      "category": "social",
+      "label": "Urgency / Pressure Language",
+      "severity": { "base": "low", "escalate_to": "medium", "when_hits_at_least": 3 },
+      "match": {
+        "type": "phrases",
+        "field": "scan_text",
+        "any_of": [
+          "act now", "immediate action", "act immediately", "urgent", "act today",
+          "account will be suspended", "account suspended", "account has been limited",
+          "verify your account", "confirm your identity", "unusual activity",
+          "suspended your account", "your account will be closed", "expires today",
+          "expires in 24 hours", "final notice", "immediately or", "failure to comply",
+          "within 24 hours", "last warning", "avoid suspension", "will be terminated"
+        ]
+      },
+      "detail": "Contains phrases designed to rush you past thinking it through: {hits}. Manufactured time pressure is the most consistent feature of phishing.",
+      "mitre": ["T1566"],
+      "tags": ["content"]
+    },
+    {
+      "id": "credential_request",
+      "category": "social",
+      "label": "Credential Request",
+      "severity": "medium",
+      "match": {
+        "type": "phrases",
+        "field": "scan_text",
+        "any_of": [
+          "enter your password", "confirm your password", "update your payment",
+          "verify your payment", "social security number", "confirm your ssn",
+          "login to verify", "sign in to confirm", "reset your password immediately",
+          "provide your card number", "confirm your card details", "verify your login",
+          "re-enter your credentials", "validate your account"
+        ]
+      },
+      "detail": "Asks for login credentials or personal verification: {hits}. Legitimate organizations do not ask you to confirm a password by email.",
+      "mitre": ["T1566.002", "T1598.003"],
+      "tags": ["content"]
+    },
+    {
+      "id": "financial_request",
+      "category": "social",
+      "label": "Financial Request",
+      "severity": "medium",
+      "match": {
+        "type": "phrases",
+        "field": "scan_text",
+        "any_of": [
+          "wire transfer", "gift card", "gift cards", "itunes card", "google play card",
+          "bitcoin", "crypto payment", "send payment to", "update bank details",
+          "change of payment", "invoice attached", "overdue invoice", "outstanding balance",
+          "routing number", "account number", "change in banking", "remittance advice",
+          "payment instructions", "updated banking details"
+        ]
+      },
+      "detail": "References payment, transfer, or a change to financial details: {hits}. Changed banking details arriving by email is the core of invoice fraud.",
+      "mitre": ["T1566"],
+      "tags": ["content"]
+    },
+    {
+      "id": "authority_impersonation",
+      "category": "social",
+      "label": "Authority Impersonation / Secrecy Request",
+      "severity": "medium",
+      "match": {
+        "type": "phrases",
+        "field": "scan_text",
+        "any_of": [
+          "this is your ceo", "this is the ceo", "on behalf of the ceo",
+          "from the it department", "it support team", "helpdesk team",
+          "this is urgent from", "confidential request", "do not discuss this",
+          "keep this confidential", "don't tell anyone", "between us",
+          "are you at your desk", "i need a favor", "handle this discreetly"
+        ]
+      },
+      "detail": "Claims executive or IT authority, or asks you to keep it quiet: {hits}. A request for secrecy exists to stop you verifying it through a second channel.",
+      "mitre": ["T1656"],
+      "tags": ["content"]
+    }
+  ]
+}

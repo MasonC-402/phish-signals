@@ -89,3 +89,29 @@ def test_conformance(
         )
 
     assert func(*args) == expected
+
+
+_CANONICAL_RULES = Path(__file__).resolve().parents[2] / "rules" / "core"
+_SHIPPED_RULES = (
+    Path(__file__).resolve().parents[1] / "src" / "phish_signals" / "rules" / "data"
+)
+
+
+@pytest.mark.skipif(
+    not _CANONICAL_RULES.is_dir(),
+    reason="canonical rules/core not present (e.g. testing from an sdist)",
+)
+def test_shipped_rule_data_matches_canonical() -> None:
+    """The shipped rule data is a byte-identical copy of rules/core/.
+
+    See rules/sync.py. A stale copy would mean this package and the
+    TypeScript one run different phrase lists while both claim to load the
+    shared rules.
+    """
+    canonical = sorted(p.name for p in _CANONICAL_RULES.glob("*.json"))
+    shipped = sorted(p.name for p in _SHIPPED_RULES.glob("*.json"))
+    assert shipped == canonical, "file sets differ; run `python3 rules/sync.py`"
+    for name in canonical:
+        assert (_SHIPPED_RULES / name).read_bytes() == (
+            _CANONICAL_RULES / name
+        ).read_bytes(), f"{name} is stale; run `python3 rules/sync.py`"

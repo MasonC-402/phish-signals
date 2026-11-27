@@ -19,6 +19,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The shared rule data under rules/core/ is copied into each package; this
+  # fails if a copy is stale. See rules/README.md.
+  rule-data:
+    name: Shared rule data in sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: python3 rules/sync.py --check
+
   typescript:
     name: TypeScript (Node ${{ matrix.node }})
     runs-on: ubuntu-latest

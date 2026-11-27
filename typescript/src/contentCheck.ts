@@ -1,40 +1,11 @@
 // Rule-based content analysis — no external API calls, no cost
 
 import { registrableDomain } from './domains';
+import { evaluateRuleset } from './rules/engine';
+import { parseRuleFile } from './rules/loader';
+import { RuleContext, Ruleset } from './rules/types';
+import contentRuleData from './rules/data/content.json';
 import type { LinkMismatch, Signal, SignalResult } from './types';
-
-const URGENCY_PHRASES = [
-  'act now', 'immediate action', 'act immediately', 'urgent', 'act today',
-  'account will be suspended', 'account suspended', 'account has been limited',
-  'verify your account', 'confirm your identity', 'unusual activity',
-  'suspended your account', 'your account will be closed', 'expires today',
-  'expires in 24 hours', 'final notice', 'immediately or', 'failure to comply',
-  'within 24 hours', 'last warning', 'avoid suspension', 'will be terminated',
-];
-
-const CREDENTIAL_REQUEST_PHRASES = [
-  'enter your password', 'confirm your password', 'update your payment',
-  'verify your payment', 'social security number', 'confirm your ssn',
-  'login to verify', 'sign in to confirm', 'reset your password immediately',
-  'provide your card number', 'confirm your card details', 'verify your login',
-  're-enter your credentials', 'validate your account',
-];
-
-const FINANCIAL_REQUEST_PHRASES = [
-  'wire transfer', 'gift card', 'gift cards', 'itunes card', 'google play card',
-  'bitcoin', 'crypto payment', 'send payment to', 'update bank details',
-  'change of payment', 'invoice attached', 'overdue invoice', 'outstanding balance',
-  'routing number', 'account number', 'change in banking', 'remittance advice',
-  'payment instructions', 'updated banking details',
-];
-
-const AUTHORITY_IMPERSONATION_PHRASES = [
-  'this is your ceo', 'this is the ceo', 'on behalf of the ceo',
-  'from the it department', 'it support team', 'helpdesk team',
-  'this is urgent from', 'confidential request', 'do not discuss this',
-  'keep this confidential', "don't tell anyone", 'between us',
-  'are you at your desk', 'i need a favor', 'handle this discreetly',
-];
 
 const GENERIC_GREETING_PATTERNS = [
   /^dear (customer|user|member|valued customer|sir\/madam)/im,
@@ -49,68 +20,51 @@ const KNOWN_BRAND_NAMES = [
   'coinbase', 'american express', 'citibank', 'office 365', 'onedrive',
 ];
 
-function scanPhrases(text: string, phraseList: string[]): string[] {
-  const lower = text.toLowerCase();
-  return phraseList.filter((phrase) => lower.includes(phrase));
-}
+// The four phrase-list rules (urgency, credential request, financial request,
+// authority impersonation) are declarative data, shared with the Python port:
+// the canonical copy is rules/core/content.json at the repo root, and
+// ./rules/data/content.json is a byte-identical copy that conformance.test.ts
+// checks against it. Edit the canonical file, then run `python3 rules/sync.py`.
+// The remaining checks below stay as code because they need regexes or
+// structured logic the rule grammar deliberately excludes.
+const CONTENT_PHRASE_RULESET = new Ruleset(
+  'content',
+  parseRuleFile(contentRuleData as Record<string, unknown>, 'rules/data/content.json'),
+);
 
-function quote(hits: string[]): string {
-  return `"${hits.slice(0, 3).join('", "')}"`;
+function phraseRuleContext(text: string, fromAddress: string | null): RuleContext {
+  return new RuleContext({
+    isRawEmail: false,
+    from: fromAddress,
+    returnPath: null,
+    replyTo: null,
+    subject: null,
+    date: null,
+    headers: null,
+    headerLines: [],
+    textBody: text,
+    htmlBody: null,
+    scanText: text,
+    urls: [],
+    linkMismatches: [],
+    dangerousSchemes: [],
+    attachments: [],
+    imageCount: 0,
+    qrCodeUrls: [],
+    qrImagesScanned: 0,
+  });
 }
 
 function checkContent(bodyText: string | null | undefined, fromAddress: string | null | undefined): SignalResult {
   const signals: Signal[] = [];
   const text = bodyText || '';
 
-  // Severity scales with how many distinct phrases hit. One "urgent" is a word;
-  // four pressure phrases in one message is a technique.
-  const urgencyHits = scanPhrases(text, URGENCY_PHRASES);
-  if (urgencyHits.length > 0) {
-    signals.push({
-      id: 'urgency_language',
-      category: 'social',
-      severity: urgencyHits.length >= 3 ? 'medium' : 'low',
-      label: 'Urgency / Pressure Language',
-      detail: `Contains phrases designed to rush you past thinking it through: ${quote(urgencyHits)}. Manufactured time pressure is the most consistent feature of phishing.`,
-      mitre: ['T1566'],
-    });
-  }
-
-  const credentialHits = scanPhrases(text, CREDENTIAL_REQUEST_PHRASES);
-  if (credentialHits.length > 0) {
-    signals.push({
-      id: 'credential_request',
-      category: 'social',
-      severity: 'medium',
-      label: 'Credential Request',
-      detail: `Asks for login credentials or personal verification: ${quote(credentialHits)}. Legitimate organizations do not ask you to confirm a password by email.`,
-      mitre: ['T1566.002', 'T1598.003'],
-    });
-  }
-
-  const financialHits = scanPhrases(text, FINANCIAL_REQUEST_PHRASES);
-  if (financialHits.length > 0) {
-    signals.push({
-      id: 'financial_request',
-      category: 'social',
-      severity: 'medium',
-      label: 'Financial Request',
-      detail: `References payment, transfer, or a change to financial details: ${quote(financialHits)}. Changed banking details arriving by email is the core of invoice fraud.`,
-      mitre: ['T1566'],
-    });
-  }
-
-  const impersonationHits = scanPhrases(text, AUTHORITY_IMPERSONATION_PHRASES);
-  if (impersonationHits.length > 0) {
-    signals.push({
-      id: 'authority_impersonation',
-      category: 'social',
-      severity: 'medium',
-      label: 'Authority Impersonation / Secrecy Request',
-      detail: `Claims executive or IT authority, or asks you to keep it quiet: ${quote(impersonationHits)}. A request for secrecy exists to stop you verifying it through a second channel.`,
-      mitre: ['T1656'],
-    });
-  }
+  // Severity scales with how many distinct phrases hit (the rule file's
+  // escalate_to / when_hits_at_least). One "urgent" is a word; four pressure
+  // phrases in one message is a technique. strict: a phrase rule throwing is
+  // a defect in shipped data, not something to swallow as a diagnostic.
+  const phraseRun = evaluateRuleset(CONTENT_PHRASE_RULESET, phraseRuleContext(text, fromAddress || null), { strict: true });
+  signals.push(...phraseRun.signals);
 
   if (GENERIC_GREETING_PATTERNS.some((re) => re.test(text))) {
     signals.push({

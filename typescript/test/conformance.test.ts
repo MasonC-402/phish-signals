@@ -92,3 +92,21 @@ for (const path of findVectorFiles(VECTORS_DIR)) {
     }
   });
 }
+
+// The shipped rule data must be a byte-identical copy of the canonical files
+// under ../../rules/core — see rules/sync.py. A stale copy here would mean
+// this package and the Python one run different phrase lists while both
+// claim to load "the" shared rules.
+test('src/rules/data matches the canonical rules/core files', () => {
+  const canonicalDir = join(__dirname, '..', '..', 'rules', 'core');
+  const shippedDir = join(__dirname, '..', 'src', 'rules', 'data');
+  const jsonIn = (dir: string) => readdirSync(dir).filter((f) => f.endsWith('.json')).sort();
+  assert.deepEqual(jsonIn(shippedDir), jsonIn(canonicalDir), 'file sets differ; run `python3 rules/sync.py`');
+  for (const name of jsonIn(canonicalDir)) {
+    assert.equal(
+      readFileSync(join(shippedDir, name), 'utf-8'),
+      readFileSync(join(canonicalDir, name), 'utf-8'),
+      `${name} is stale; run \`python3 rules/sync.py\``,
+    );
+  }
+});

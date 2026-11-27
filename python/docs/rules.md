@@ -78,10 +78,10 @@ scored = score_signals(run["signals"])
 ### Writing a declarative JSON rule
 
 Most content rules are a phrase list and a severity. Write them as data
-instead of code so the phrase lists are defined once — the TypeScript rule
-layer (`typescript/src/rules/`) now has a matching loader, verified to
-produce byte-identical signals from the same rule file, though
-`checkContent` isn't wired to load from one yet:
+instead of code so the phrase lists are defined once. The TypeScript rule
+layer (`typescript/src/rules/`) has a matching loader that produces
+byte-identical signals from the same rule file, and both implementations'
+built-in content rules come from the same shared file:
 
 ```json
 {
@@ -207,7 +207,7 @@ not score anything itself; that stays in `phish_signals.signals.score_signals()`
 The `CONTENT_RULESET` in `content_check.py` assembles all built-in content
 detection rules:
 
-### Declarative rules (from `rules/data/content.json`)
+### Declarative rules (from `rules/data/content.json`, shared with TypeScript)
 
 | Rule ID | Signal ID | Category | Severity | What it detects |
 |---------|-----------|----------|----------|-----------------|
