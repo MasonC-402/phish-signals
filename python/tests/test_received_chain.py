@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from phish_signals.received_chain import analyze_received_chain, is_private_ip
+from phish_signals.types import HeaderLine
 
 
-def _lines(*raw_lines: str) -> list[dict[str, str]]:
+def _lines(*raw_lines: str) -> list[HeaderLine]:
     return [{"key": "received", "line": line} for line in raw_lines]
 
 

@@ -1,0 +1,60 @@
+{
+  "module": "urlCheck",
+  "function": "checkQrCodes",
+  "cases": [
+    {
+      "name": "no QR URLs",
+      "args": [
+        []
+      ],
+      "expect": {
+        "signals": []
+      }
+    },
+    {
+      "name": "one QR-decoded URL",
+      "args": [
+        [
+          "http://paypa1.com/login"
+        ]
+      ],
+      "expect": {
+        "signals": [
+          {
+            "id": "qr_code_link",
+            "category": "payload",
+            "severity": "low",
+            "label": "QR Code Contains a Link",
+            "detail": "An embedded image contains a QR code that decodes to a link: http://paypa1.com/login. It was analyzed the same as any other link in the message — see the Links table for its risk assessment. Routing a reader through a QR code is an increasingly common way to get a link past text-based filtering and past someone glancing at where a link actually points.",
+            "mitre": [
+              "T1566.002"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "several QR-decoded URLs",
+      "args": [
+        [
+          "https://example.com/",
+          "http://192.168.0.1/x"
+        ]
+      ],
+      "expect": {
+        "signals": [
+          {
+            "id": "qr_code_link",
+            "category": "payload",
+            "severity": "low",
+            "label": "QR Code Contains a Link",
+            "detail": "An embedded image contains a QR code that decodes to 2 links: https://example.com/, http://192.168.0.1/x. It was analyzed the same as any other link in the message — see the Links table for its risk assessment. Routing a reader through a QR code is an increasingly common way to get a link past text-based filtering and past someone glancing at where a link actually points.",
+            "mitre": [
+              "T1566.002"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

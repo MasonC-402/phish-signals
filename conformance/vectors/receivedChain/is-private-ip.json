@@ -1,0 +1,41 @@
+{
+  "module": "receivedChain",
+  "function": "isPrivateIp",
+  "cases": [
+    {
+      "name": "10/8",
+      "input": "10.20.30.40",
+      "expect": true
+    },
+    {
+      "name": "172.16/12 lower edge",
+      "input": "172.16.0.1",
+      "expect": true
+    },
+    {
+      "name": "just outside 172.16/12",
+      "input": "172.32.0.1",
+      "expect": false
+    },
+    {
+      "name": "192.168/16",
+      "input": "192.168.1.1",
+      "expect": true
+    },
+    {
+      "name": "loopback",
+      "input": "127.0.0.1",
+      "expect": true
+    },
+    {
+      "name": "public",
+      "input": "8.8.8.8",
+      "expect": false
+    },
+    {
+      "name": "link-local",
+      "input": "169.254.1.1",
+      "expect": true
+    }
+  ]
+}

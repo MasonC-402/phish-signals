@@ -287,3 +287,23 @@ test('QR image scanning is bounded and does not run on a plain-text paste', asyn
   assert.equal(parsed.qrImagesScanned, 0);
   assert.deepEqual(parsed.qrCodeUrls, []);
 });
+
+// Regression: mailparser <3.15 bundled nodemailer <=10.1.3, whose
+// addressparser ended a nested RFC 5322 comment at the first ")" and spilled
+// the remainder of the comment into the display name (GHSA-8c8m-p3m8-cjg8 and
+// siblings). An attacker could plant a trusted-looking address inside a
+// comment and have it surface in `from`, where the display-name brand-spoof
+// check reads it. The fixed parser drops the comment cleanly.
+test('a trusted address hidden inside a nested From comment does not leak into from', async () => {
+  const raw = [
+    'From: Bank (a (b) c@trusted.example) <x@evil.example>',
+    'To: victim@example.com',
+    'Subject: hi',
+    '',
+    'body',
+    '',
+  ].join('\r\n');
+  const parsed = await parseEmail(raw);
+  assert.ok(parsed.from?.includes('x@evil.example'), `from was ${parsed.from}`);
+  assert.ok(!parsed.from?.includes('trusted.example'), `from leaked comment text: ${parsed.from}`);
+});

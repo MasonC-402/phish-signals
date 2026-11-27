@@ -1,0 +1,262 @@
+{
+  "module": "attachmentCheck",
+  "function": "checkAttachments",
+  "cases": [
+    {
+      "name": "no attachments",
+      "args": [
+        []
+      ],
+      "expect": {
+        "signals": []
+      }
+    },
+    {
+      "name": "ordinary PDF",
+      "args": [
+        [
+          {
+            "filename": "report.pdf",
+            "contentType": "application/pdf",
+            "size": 1000
+          }
+        ]
+      ],
+      "expect": {
+        "signals": []
+      }
+    },
+    {
+      "name": "executable",
+      "args": [
+        [
+          {
+            "filename": "setup.exe",
+            "contentType": "application/x-msdownload",
+            "size": 1000
+          }
+        ]
+      ],
+      "expect": {
+        "signals": [
+          {
+            "id": "attachment_executable",
+            "category": "payload",
+            "severity": "critical",
+            "label": "Executable Attachment",
+            "detail": "\"setup.exe\" is a directly executable file type (.exe). Opening it runs code on your machine.",
+            "mitre": [
+              "T1566.001",
+              "T1204.002"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "double extension",
+      "args": [
+        [
+          {
+            "filename": "invoice.pdf.exe",
+            "contentType": "application/octet-stream",
+            "size": 1000
+          }
+        ]
+      ],
+      "expect": {
+        "signals": [
+          {
+            "id": "attachment_double_extension",
+            "category": "payload",
+            "severity": "critical",
+            "label": "Disguised Executable Attachment",
+            "detail": "\"invoice.pdf.exe\" uses a double extension to pass an executable off as a document. This is deliberate deception, not a misconfiguration.",
+            "mitre": [
+              "T1566.001",
+              "T1036.007",
+              "T1204.002"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "HTML attachment produces no signal — a known detection gap (HTML smuggling / credential-harvest pages), pinned as current behaviour, not endorsed",
+      "args": [
+        [
+          {
+            "filename": "secure-message.html",
+            "contentType": "text/html",
+            "size": 1000
+          }
+        ]
+      ],
+      "expect": {
+        "signals": []
+      }
+    },
+    {
+      "name": "macro-enabled Office document",
+      "args": [
+        [
+          {
+            "filename": "payroll.docm",
+            "contentType": "application/vnd.ms-word.document.macroEnabled.12",
+            "size": 1000
+          }
+        ]
+      ],
+      "expect": {
+        "signals": [
+          {
+            "id": "attachment_macro_document",
+            "category": "payload",
+            "severity": "high",
+            "label": "Macro-Enabled Document",
+            "detail": "\"payroll.docm\" is a macro-enabled Office document (.docm). The macro runs on \"Enable Content\", which is what the message body is usually written to talk you into.",
+            "mitre": [
+              "T1566.001",
+              "T1204.002"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "executable extension with an innocuous MIME type",
+      "args": [
+        [
+          {
+            "filename": "photo.scr",
+            "contentType": "image/jpeg",
+            "size": 1000
+          }
+        ]
+      ],
+      "expect": {
+        "signals": [
+          {
+            "id": "attachment_executable",
+            "category": "payload",
+            "severity": "critical",
+            "label": "Executable Attachment",
+            "detail": "\"photo.scr\" is a directly executable file type (.scr). Opening it runs code on your machine.",
+            "mitre": [
+              "T1566.001",
+              "T1204.002"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "ZIP with a dangerous entry inside",
+      "args": [
+        [
+          {
+            "filename": "docs.zip",
+            "contentType": "application/zip",
+            "size": 1000,
+            "zipEntries": [
+              {
+                "filename": "readme.txt",
+                "uncompressedSize": 10
+              },
+              {
+                "filename": "invoice.js",
+                "uncompressedSize": 900
+              }
+            ]
+          }
+        ]
+      ],
+      "expect": {
+        "signals": [
+          {
+            "id": "attachment_archive_contains_executable",
+            "category": "payload",
+            "severity": "critical",
+            "label": "Archive Contains a Disguised Executable",
+            "detail": "\"docs.zip\" is a ZIP archive (identified from its content, not just its name). Its directory listing shows \"invoice.js\" — a directly executable or macro-bearing file sitting inside what looks like an ordinary archive. Its compressed bytes were never extracted or run; only the directory listing was read.",
+            "mitre": [
+              "T1566.001",
+              "T1204.002",
+              "T1027.001"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "ZIP whose directory could not be read",
+      "args": [
+        [
+          {
+            "filename": "archive.zip",
+            "contentType": "application/zip",
+            "size": 1000,
+            "zipUnreadable": true
+          }
+        ]
+      ],
+      "expect": {
+        "signals": [
+          {
+            "id": "attachment_archive_unreadable",
+            "category": "payload",
+            "severity": "low",
+            "label": "Archive Directory Could Not Be Read",
+            "detail": "\"archive.zip\" is a ZIP archive, but its central directory could not be read (most likely a ZIP64 archive, which isn't supported here). Its contents are unknown rather than confirmed clean — this is not the same as having been checked and found nothing dangerous.",
+            "mitre": [
+              "T1566.001"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "disk image / shortcut",
+      "args": [
+        [
+          {
+            "filename": "update.iso",
+            "contentType": "application/octet-stream",
+            "size": 1000
+          },
+          {
+            "filename": "open.lnk",
+            "contentType": "application/octet-stream",
+            "size": 1000
+          }
+        ]
+      ],
+      "expect": {
+        "signals": [
+          {
+            "id": "attachment_disk_image",
+            "category": "payload",
+            "severity": "high",
+            "label": "Disk Image Attachment",
+            "detail": "\"update.iso\" is a disk image (.iso). These mount on double-click and their contents bypass the \"downloaded from the internet\" warning an executable would trigger.",
+            "mitre": [
+              "T1566.001",
+              "T1204.002"
+            ]
+          },
+          {
+            "id": "attachment_shortcut",
+            "category": "payload",
+            "severity": "high",
+            "label": "Shortcut / Script Container Attachment",
+            "detail": "\"open.lnk\" is a shortcut or script container (.lnk). It looks inert but can launch an arbitrary command when opened.",
+            "mitre": [
+              "T1566.001",
+              "T1204.002"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -30,8 +30,8 @@ from phish_signals import check_content, score_signals
 result = check_content("ACT NOW or your account will be suspended!")
 scored = score_signals(result["signals"])
 
-print(scored["verdict"])   # "Low Risk"
-print(scored["score"])     # 6
+print(scored["verdict"])  # "Low Risk"
+print(scored["score"])  # 6
 for signal in scored["signals"]:
     print(f"  [{signal['severity']}] {signal['label']}: {signal['detail']}")
 ```
@@ -43,25 +43,31 @@ from phish_signals.rules import Rule, RuleContext, Ruleset, evaluate_ruleset
 from phish_signals import score_signals
 from phish_signals.types import Signal
 
+
 def check_vendor_lookalike(context: RuleContext) -> list[Signal]:
     if "acme-payments" not in (context.sender_domain or ""):
         return []
-    return [{
-        "id": "acme_vendor_lookalike",
-        "category": "identity",
-        "severity": "high",
-        "label": "Vendor Lookalike Domain",
-        "detail": f"Sender domain {context.sender_domain} imitates our vendor.",
-    }]
+    return [
+        {
+            "id": "acme_vendor_lookalike",
+            "category": "identity",
+            "severity": "high",
+            "label": "Vendor Lookalike Domain",
+            "detail": f"Sender domain {context.sender_domain} imitates our vendor.",
+        }
+    ]
+
 
 my_rules = Ruleset(
     name="acme",
-    rules=(Rule(
-        id="acme.vendor_lookalike",
-        emits=frozenset({"acme_vendor_lookalike"}),
-        evaluate=check_vendor_lookalike,
-        tags=frozenset({"identity"}),
-    ),),
+    rules=(
+        Rule(
+            id="acme.vendor_lookalike",
+            emits=frozenset({"acme_vendor_lookalike"}),
+            evaluate=check_vendor_lookalike,
+            tags=frozenset({"identity"}),
+        ),
+    ),
 )
 
 # Run and score
@@ -72,10 +78,10 @@ scored = score_signals(run["signals"])
 ### Writing a declarative JSON rule
 
 Most content rules are a phrase list and a severity. Write them as data
-instead of code so the phrase lists are defined once — the TypeScript rule
-layer (`typescript/src/rules/`) now has a matching loader, verified to
-produce byte-identical signals from the same rule file, though
-`checkContent` isn't wired to load from one yet:
+instead of code so the phrase lists are defined once. The TypeScript rule
+layer (`typescript/src/rules/`) has a matching loader that produces
+byte-identical signals from the same rule file, and both implementations'
+built-in content rules come from the same shared file:
 
 ```json
 {
@@ -201,7 +207,7 @@ not score anything itself; that stays in `phish_signals.signals.score_signals()`
 The `CONTENT_RULESET` in `content_check.py` assembles all built-in content
 detection rules:
 
-### Declarative rules (from `rules/data/content.json`)
+### Declarative rules (from `rules/data/content.json`, shared with TypeScript)
 
 | Rule ID | Signal ID | Category | Severity | What it detects |
 |---------|-----------|----------|----------|-----------------|
@@ -271,9 +277,11 @@ combined = CONTENT_RULESET.with_rules(list(custom))
 
 ```python
 # Gift-card language is normal in our org
-quieter = CONTENT_RULESET.with_severity_overrides({
-    "financial_request": "info",
-})
+quieter = CONTENT_RULESET.with_severity_overrides(
+    {
+        "financial_request": "info",
+    }
+)
 ```
 
 ## Testing rules

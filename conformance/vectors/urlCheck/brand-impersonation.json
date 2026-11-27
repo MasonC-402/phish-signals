@@ -1,0 +1,26 @@
+{
+  "module": "urlCheck",
+  "function": "brandImpersonation",
+  "cases": [
+    {
+      "name": "the real brand domain",
+      "input": "www.paypal.com",
+      "expect": null
+    },
+    {
+      "name": "brand as leftmost label of another domain",
+      "input": "paypal.com.secure.example",
+      "expect": "paypal.com"
+    },
+    {
+      "name": "brand embedded in a hyphenated label",
+      "input": "paypal-security-check.example",
+      "expect": "paypal.com"
+    },
+    {
+      "name": "no brand",
+      "input": "example.org",
+      "expect": null
+    }
+  ]
+}

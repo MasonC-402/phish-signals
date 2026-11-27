@@ -74,7 +74,7 @@ jobs:
       # workspace root and never came across in the split), so a release builds
       # and tests against exactly the dependency tree that was reviewed rather
       # than whatever floats in at run time. The lockfile is not published:
-      # package.json's "files" ships dist/ only.
+      # package.json's "files" ships dist/ and docs/ only.
       - name: Install dependencies
         run: npm ci
 

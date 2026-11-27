@@ -1,0 +1,291 @@
+{
+  "module": "urlCheck",
+  "function": "checkUrls",
+  "cases": [
+    {
+      "name": "ordinary well-known domain",
+      "args": [
+        [
+          "https://www.google.com/search?q=x"
+        ]
+      ],
+      "expect": [
+        {
+          "url": "https://www.google.com/search?q=x",
+          "hostname": "www.google.com",
+          "risk": "clean",
+          "detail": "No structural red flags detected.",
+          "riskScore": 0,
+          "decodedHost": null,
+          "scripts": [
+            "Latin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "digit-substitution typosquat of a known brand",
+      "args": [
+        [
+          "http://paypa1.com/login"
+        ]
+      ],
+      "expect": [
+        {
+          "url": "http://paypa1.com/login",
+          "hostname": "paypa1.com",
+          "risk": "malicious",
+          "detail": "Closely resembles \"paypal.com\" (likely typosquat)",
+          "riskScore": 35,
+          "decodedHost": null,
+          "scripts": [
+            "Latin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "punycode homograph (Cyrillic а in paypal)",
+      "args": [
+        [
+          "http://xn--pypal-4ve.com/"
+        ]
+      ],
+      "expect": [
+        {
+          "url": "http://xn--pypal-4ve.com/",
+          "hostname": "xn--pypal-4ve.com",
+          "risk": "malicious",
+          "detail": "Hostname reads as \"pаypal.com\" and mixes Latin with Cyrillic characters in a single label, a homograph trick for faking a familiar domain",
+          "riskScore": 35,
+          "decodedHost": "pаypal.com",
+          "scripts": [
+            "Latin",
+            "Cyrillic"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "raw IP literal host with a login path",
+      "args": [
+        [
+          "http://192.168.0.1/login.php"
+        ]
+      ],
+      "expect": [
+        {
+          "url": "http://192.168.0.1/login.php",
+          "hostname": "192.168.0.1",
+          "risk": "suspicious",
+          "detail": "Uses a raw IP address instead of a domain name",
+          "riskScore": 25,
+          "decodedHost": null,
+          "scripts": []
+        }
+      ]
+    },
+    {
+      "name": "known URL shortener",
+      "args": [
+        [
+          "https://bit.ly/3abcXYZ"
+        ]
+      ],
+      "expect": [
+        {
+          "url": "https://bit.ly/3abcXYZ",
+          "hostname": "bit.ly",
+          "risk": "suspicious",
+          "detail": "Uses a URL shortener, destination is hidden",
+          "riskScore": 10,
+          "decodedHost": null,
+          "scripts": [
+            "Latin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "suspicious TLD",
+      "args": [
+        [
+          "http://secure-update.tk/account"
+        ]
+      ],
+      "expect": [
+        {
+          "url": "http://secure-update.tk/account",
+          "hostname": "secure-update.tk",
+          "risk": "suspicious",
+          "detail": "Uses a TLD (tk) commonly associated with abuse",
+          "riskScore": 10,
+          "decodedHost": null,
+          "scripts": [
+            "Latin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "brand name as a subdomain of an unrelated domain",
+      "args": [
+        [
+          "https://paypal.com.account-verify.example/signin"
+        ]
+      ],
+      "expect": [
+        {
+          "url": "https://paypal.com.account-verify.example/signin",
+          "hostname": "paypal.com.account-verify.example",
+          "risk": "malicious",
+          "detail": "Puts \"paypal\" in the hostname, but the real domain is \"account-verify.example\"",
+          "riskScore": 35,
+          "decodedHost": null,
+          "scripts": [
+            "Latin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "excessive subdomains",
+      "args": [
+        [
+          "http://a.b.c.d.e.example.com/"
+        ]
+      ],
+      "expect": [
+        {
+          "url": "http://a.b.c.d.e.example.com/",
+          "hostname": "a.b.c.d.e.example.com",
+          "risk": "suspicious",
+          "detail": "Unusually long subdomain chain, possibly hiding the real domain",
+          "riskScore": 15,
+          "decodedHost": null,
+          "scripts": [
+            "Latin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "userinfo @ trick hides the real host",
+      "args": [
+        [
+          "http://www.paypal.com@evil.example/login"
+        ]
+      ],
+      "expect": [
+        {
+          "url": "http://www.paypal.com@evil.example/login",
+          "hostname": "evil.example",
+          "risk": "malicious",
+          "detail": "Contains \"@\" trick. The real destination differs from what appears before the @",
+          "riskScore": 35,
+          "decodedHost": null,
+          "scripts": [
+            "Latin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "direct executable download",
+      "args": [
+        [
+          "http://files.example.net/invoice.exe"
+        ]
+      ],
+      "expect": [
+        {
+          "url": "http://files.example.net/invoice.exe",
+          "hostname": "files.example.net",
+          "risk": "malicious",
+          "detail": "Links directly to a .exe file, an executable or archive payload rather than a document",
+          "riskScore": 30,
+          "decodedHost": null,
+          "scripts": [
+            "Latin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "credential keywords in path and query",
+      "args": [
+        [
+          "http://example.org/verify/account?login=1&password=reset"
+        ]
+      ],
+      "expect": [
+        {
+          "url": "http://example.org/verify/account?login=1&password=reset",
+          "hostname": "example.org",
+          "risk": "suspicious",
+          "detail": "URL path contains multiple login/verification keywords",
+          "riskScore": 10,
+          "decodedHost": null,
+          "scripts": [
+            "Latin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "not parseable as a URL",
+      "args": [
+        [
+          "not a url at all"
+        ]
+      ],
+      "expect": [
+        {
+          "url": "not a url at all",
+          "risk": "unknown",
+          "detail": "Could not parse this URL."
+        }
+      ]
+    },
+    {
+      "name": "several URLs analysed together, order preserved",
+      "args": [
+        [
+          "https://example.com/",
+          "http://paypa1.com/"
+        ]
+      ],
+      "expect": [
+        {
+          "url": "https://example.com/",
+          "hostname": "example.com",
+          "risk": "clean",
+          "detail": "No structural red flags detected.",
+          "riskScore": 0,
+          "decodedHost": null,
+          "scripts": [
+            "Latin"
+          ]
+        },
+        {
+          "url": "http://paypa1.com/",
+          "hostname": "paypa1.com",
+          "risk": "malicious",
+          "detail": "Closely resembles \"paypal.com\" (likely typosquat)",
+          "riskScore": 35,
+          "decodedHost": null,
+          "scripts": [
+            "Latin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "no URLs",
+      "args": [
+        []
+      ],
+      "expect": []
+    }
+  ]
+}

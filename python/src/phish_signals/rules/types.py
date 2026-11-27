@@ -59,16 +59,28 @@ from ..types import (
     UrlAnalysis,
 )
 
-_VALID_SEVERITIES: frozenset[str] = frozenset({
-    "critical", "high", "medium", "low", "info",
-})
+_VALID_SEVERITIES: frozenset[str] = frozenset(
+    {
+        "critical",
+        "high",
+        "medium",
+        "low",
+        "info",
+    }
+)
 
 #: Allowed values for :class:`~phish_signals.types.EvidenceCategory`. Defined
 #: here (rather than in loader or engine) so all three sub-modules share a
 #: single source of truth without circular imports.
-_VALID_CATEGORIES: frozenset[str] = frozenset({
-    "authentication", "identity", "infrastructure", "payload", "social",
-})
+_VALID_CATEGORIES: frozenset[str] = frozenset(
+    {
+        "authentication",
+        "identity",
+        "infrastructure",
+        "payload",
+        "social",
+    }
+)
 
 #: A rule id must be ``<namespace>.<name>``, both lowercase identifiers. The
 #: namespace is not decoration: it is what stops a custom rule from colliding
@@ -186,9 +198,7 @@ class RuleContext:
         string that may not be a well-formed URL at all.
         """
         return frozenset(
-            hostname.lower()
-            for url in self.urls
-            if (hostname := url.get("hostname"))
+            hostname.lower() for url in self.urls if (hostname := url.get("hostname"))
         )
 
     @cached_property
@@ -295,7 +305,8 @@ class Ruleset:
         # Freeze a defensive copy so mutating the original dict after
         # construction cannot introduce dangling or invalid overrides.
         object.__setattr__(
-            self, "severity_overrides",
+            self,
+            "severity_overrides",
             MappingProxyType(dict(self.severity_overrides)),
         )
         self.validate()
@@ -420,9 +431,7 @@ class Ruleset:
         kept = tuple(r for r in self.rules if r.tags & keep)
         return self._rebuild(kept)
 
-    def with_severity_overrides(
-        self, overrides: Mapping[str, Severity]
-    ) -> Ruleset:
+    def with_severity_overrides(self, overrides: Mapping[str, Severity]) -> Ruleset:
         """Return a ruleset with these signal-id severity overrides merged in."""
         return replace(
             self, severity_overrides={**self.severity_overrides, **overrides}

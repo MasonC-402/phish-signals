@@ -6,12 +6,11 @@ name: Publish to PyPI
 # npm's bare npm-v) keeps the two release pipelines from ever triggering each
 # other, since both live in this same repo.
 #
-# This workflow will not succeed until PyPI's trusted publisher is
-# configured for this project: pypi.org -> phish-signals package settings
-# (or, for the very first release, the "pending publisher" flow, since the
-# project won't exist on PyPI yet) -> add a GitHub publisher for
-# MasonC-402/phish-signals, workflow publish-pypi.yml. No API token is
-# stored here or needed — same OIDC trusted-publishing model as npm.
+# Authenticates through PyPI trusted publishing, configured on pypi.org ->
+# phish-signals -> Publishing as a GitHub publisher for
+# MasonC-402/phish-signals, workflow publish-pypi.yml. Renaming this file or
+# moving the repo breaks that mapping until the publisher is updated there.
+# No API token is stored here or needed — same OIDC model as npm.
 on:
   push:
     tags:

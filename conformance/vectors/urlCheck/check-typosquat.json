@@ -1,0 +1,31 @@
+{
+  "module": "urlCheck",
+  "function": "checkTyposquat",
+  "cases": [
+    {
+      "name": "exact brand domain is not a typosquat",
+      "input": "paypal.com",
+      "expect": null
+    },
+    {
+      "name": "one substitution from a brand",
+      "input": "paypa1.com",
+      "expect": "paypal.com"
+    },
+    {
+      "name": "one insertion from a brand",
+      "input": "amazzon.com",
+      "expect": "amazon.com"
+    },
+    {
+      "name": "subdomain of a typosquat",
+      "input": "login.rnicrosoft.com",
+      "expect": "microsoft.com"
+    },
+    {
+      "name": "unrelated domain",
+      "input": "example.org",
+      "expect": null
+    }
+  ]
+}

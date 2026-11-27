@@ -1,0 +1,106 @@
+name: CI
+
+# Runs both implementations' test suites (each of which includes the shared
+# conformance vectors) plus their static checks on every push to main and
+# every pull request. The publish workflows also run the tests, but only at
+# release time — without this, a broken main is discovered by trying to cut
+# a release.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The shared rule data under rules/core/ is copied into each package; this
+  # fails if a copy is stale. See rules/README.md.
+  rule-data:
+    name: Shared rule data in sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: python3 rules/sync.py --check
+
+  typescript:
+    name: TypeScript (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22', '24']
+    defaults:
+      run:
+        working-directory: typescript
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: typescript/package-lock.json
+
+      - run: npm ci
+
+      # The published build, not just the test build — catches a type error
+      # in src/ that tsconfig.test.json would also catch, but also any
+      # tsconfig.json-only breakage before it reaches prepublishOnly.
+      - name: Type-check and build
+        run: npm run build
+
+      - name: Test (includes conformance vectors)
+        run: npm test
+
+      # Runtime dependencies only: this package parses attacker-controlled
+      # .eml content through mailparser, so an advisory in that tree is
+      # directly reachable. Dev-only advisories don't ship to users.
+      - name: Audit runtime dependencies
+        if: matrix.node == '24'
+        run: npm audit --omit=dev --audit-level=moderate
+
+  python:
+    name: Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The floor declared in pyproject.toml's requires-python, and the
+        # newest release.
+        python: ['3.10', '3.14']
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          working-directory: python
+          python-version: ${{ matrix.python }}
+
+      - run: uv sync --locked
+
+      # Static checks run once, on the newest Python. On 3.10 the resolver
+      # picks an older numpy whose stubs ty rejects in a test helper — stub
+      # noise, not a defect — and lint/format results don't vary by version.
+      - name: Lint
+        if: matrix.python == '3.14'
+        run: uv run ruff check
+
+      - name: Format
+        if: matrix.python == '3.14'
+        run: uv run ruff format --check
+
+      - name: Type-check
+        if: matrix.python == '3.14'
+        run: uv run ty check
+
+      - name: Test (includes conformance vectors)
+        run: uv run pytest

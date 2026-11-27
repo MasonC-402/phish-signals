@@ -5,29 +5,36 @@ as. For the engine that runs rules (`Rule`, `RuleContext`, `Ruleset`, and
 what running a ruleset actually guarantees), see
 [CONCEPTS.md](CONCEPTS.md) instead.
 
-Language-neutral phishing rules, as data. Both implementations now have a
-declarative rule loader capable of reading this format — `python/`'s
-(`phish_signals.rules`) and, as of the TypeScript rule engine port,
-`typescript/`'s (`typescript/src/rules/`) — and the two have been verified to
-produce byte-identical signals from the same rule data.
+Language-neutral phishing rules, as data. Both implementations load this
+format — `python/` through `phish_signals.rules`, `typescript/` through
+`typescript/src/rules/` — and both `checkContent` implementations run the
+same rule file.
 
-Two things this directory does not yet deliver on, despite that:
+## Layout and the one copy step
 
-- **`contentCheck.ts` isn't wired to the loader yet.** It still uses inline
-  phrase arrays, same as before the loader existed. Only `content_check.py`
-  actually loads declarative rules today.
-- **The shared rule data doesn't live here yet.** The one declarative rule
-  file that exists (`content.json`, the four phrase-list content rules) is
-  bundled inside the Python package at
-  `python/src/phish_signals/rules/data/content.json`, not in this directory —
-  so despite the loader working in both languages, there is currently nothing
-  in `rules/` for either of them to load, and the Python and TypeScript phrase
-  lists still have to be kept in sync by hand.
+`core/` holds the canonical rule files shipped by this project (currently
+`core/content.json`, the four phrase-list content rules: urgency, credential
+request, financial request, authority impersonation). **Edit them here.**
 
-The goal: a phrase list written as data is added once and is live in both
-languages immediately, with nothing to keep in sync. Until the TypeScript
-loader lands, the Python side is the only consumer, and the TypeScript
-phrase arrays must be kept in sync manually (or via `conformance/`).
+A published package can only contain files from inside its own directory, so
+each package carries a byte-identical copy:
+
+| Canonical | Shipped copy |
+| --- | --- |
+| `rules/core/*.json` | `python/src/phish_signals/rules/data/*.json` |
+| | `typescript/src/rules/data/*.json` |
+
+After editing a canonical file, run:
+
+```sh
+python3 rules/sync.py          # copy into both packages
+python3 rules/sync.py --check  # exit 1 if any copy is stale (CI runs this)
+```
+
+Forgetting is caught, not silent: CI runs `--check`, and each language's
+test suite also fails on a stale or orphaned copy. So a phrase list is
+written once, and the two implementations cannot ship different versions of
+it.
 
 ## Relationship to `conformance/`
 

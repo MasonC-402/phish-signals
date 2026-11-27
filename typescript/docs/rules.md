@@ -218,13 +218,16 @@ not score anything itself; that stays in `scoreSignals()`.
 
 ## Built-in content rules
 
-Unlike Python, **none of `contentCheck.ts`'s rules are routed through
-`Rule`/`Ruleset` yet** — they're inline logic in one function, same as before
-the rule engine existed (see [`rules/README.md`](https://github.com/MasonC-402/phish-signals/blob/main/rules/README.md)
-for that gap). The signal ids, categories, and severities below are still
-guaranteed identical to Python's by conformance vectors; there just isn't a
-`Rule.id` or a built-in `Ruleset` object for any of these to filter,
-disable, or replace yet.
+The four phrase-list rules (`urgency_language`, `credential_request`,
+`financial_request`, `authority_impersonation`) are loaded from the shared
+declarative rule file — the same `rules/core/content.json` the Python
+package loads (see [`rules/README.md`](https://github.com/MasonC-402/phish-signals/blob/main/rules/README.md))
+— and run through `Ruleset`/`evaluateRuleset` inside `checkContent`. The
+remaining checks are still inline code in that function. Unlike Python,
+there is no exported `CONTENT_RULESET` object to filter, disable, or replace
+yet: that is the same public-API decision described at the top of this page.
+The signal ids, categories, and severities below are guaranteed identical to
+Python's by conformance vectors.
 
 | Signal ID | Category | Severity | What it detects |
 | --- | --- | --- | --- |
@@ -242,10 +245,9 @@ disable, or replace yet.
 
 Because `contentCheck.ts` doesn't expose a built-in `Ruleset` yet, there's no
 `CONTENT_RULESET.withRules(...)` equivalent to hook into today — that becomes
-possible once `contentCheck.ts` itself is ported onto `Rule`/`Ruleset` (the
-open item in [`rules/README.md`](https://github.com/MasonC-402/phish-signals/blob/main/rules/README.md)). Until then,
-run your own ruleset alongside the built-in check and merge the signals
-yourself:
+possible once the rule layer is part of the public API and the remaining
+inline checks are ported onto `Rule`. Until then, run your own ruleset
+alongside the built-in check and merge the signals yourself:
 
 ```ts
 import { checkContent } from '@farksecurity/phish-signals';

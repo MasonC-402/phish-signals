@@ -1,6 +1,6 @@
 [project]
 name = "phish-signals"
-version = "0.2.2"
+version = "0.2.3"
 description = "Heuristic phishing-detection engine: URL/domain typosquat and homograph checks, SPF/DKIM/DMARC-aware header analysis, Received-chain spoofing checks, IOC defang/refang, MITRE ATT&CK mapping, Sigma rule generation, and parsing for raw .eml/.msg messages plus embedded QR codes."
 readme = "README.md"
 license = "MIT"
@@ -36,7 +36,7 @@ dependencies = [
     "pillow>=10",
 ]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Information Technology",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",

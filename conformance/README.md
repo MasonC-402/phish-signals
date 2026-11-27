@@ -36,10 +36,14 @@ tests `registrableDomain` from `typescript/src/domains.ts`, and so on).
 }
 ```
 
-- `input` is the single argument passed to the function under test. (Nothing
-  currently vectored takes more than one argument. If that changes, use
-  `"args": [...]` — an array of positional arguments — instead of `input`,
-  and update this doc.)
+- `input` is the single argument passed to the function under test. A
+  function taking more than one argument uses `"args": [...]` — an array of
+  positional arguments — instead of `input`.
+- JSON has no `Map`, but `checkAuthentication` and `checkHeaderAnomalies`
+  take their headers as one (mailparser's shape). Write such an argument as
+  `{"$map": {"from": "...", ...}}`: the TypeScript harness builds a `Map`
+  from it, the Python harness a plain `dict`. Any object whose only key is
+  `$map` is decoded this way, at any depth.
 - `expect` is compared against the actual return value by **exact deep
   equality**, not a partial/subset match. This is deliberate: partial
   matching hides drift instead of catching it. If a vector only checks
@@ -74,12 +78,8 @@ normal test run — there's no separate command.
   for setup). Reads the same files, converting each vector's camelCase
   `module` and `function` names to snake_case (`urlCheck` →
   `phish_signals.url_check`, `registrableDomain` → `registrable_domain`) to
-  find them. Every module vectored so far is a single lowercase word, where
-  that conversion is the identity; it starts mattering with the checks layer.
-  Unlike the TypeScript side, a vector whose module or function doesn't exist
-  yet is **skipped, not failed** — the Python port is in progress, and "not
-  implemented yet" isn't the same failure as "implemented and wrong." A vector
-  whose function exists but returns the wrong value still fails normally.
+  find them. As on the TypeScript side, a vector whose module or function
+  can't be found fails rather than skipping.
 
   One consequence worth knowing before writing Python-side code: because
   `expect` is compared by exact deep equality against parsed JSON, anything a
@@ -90,38 +90,55 @@ normal test run — there's no separate command.
   languages: `benignSignals` stays camelCase on the Python side, because the
   key is part of the contract rather than an internal style choice.
 
+## Writing a vector
+
+Don't hand-derive `expect`. Write each case with `name` and `input`/`args`
+only, then fill it from the TypeScript implementation (the reference):
+
+```sh
+(cd typescript && npm run pretest)   # compiles src/ in place
+node conformance/fill-expect.js      # fills only cases with no `expect`
+```
+
+Then **read the diff**. A filled value that doesn't match the case's `name`
+is a finding, not a formality: either the name is wrong, or the reference
+has a bug or a gap. Where the vector pins a quirk or gap rather than an
+endorsed result, the `name` says so. Finally, run both test suites; a Python
+failure is a parity bug. `--force` regenerates every case, for a deliberate
+behaviour change only.
+
 ## Coverage
 
-The pure, zero-runtime-dependency layer is vectored — `domains`, `punycode`,
-`iocs`, and `signals`'s `scoreSignals` — plus `contentCheck`'s `checkContent`
-(the first vector into the checks layer, and the first to use the multi-arg
-`args` form) and the rule loader's `quoteHits`/`renderDetail` helpers. The
-rest of the checks layer (`urlCheck`, `authCheck`, `attachmentCheck`,
-`combineResults`, the parsers, ...) has no vectors yet, and neither does the
-rule engine's own internals (`Rule`, `RuleContext`, `Ruleset`,
-`evaluateRuleset`) — see this directory's git history for why those aren't
-vectorable directly: they hold or take a live callable, not JSON-shaped data.
-Both implementations satisfy every vector here.
+127 cases across:
 
-Coverage is thinner than the passing count suggests, and it is worth being
-precise about that: 42 cases is enough to pin the documented quirks and one
-real slice of the checks layer, not
-enough to catch a subtly wrong port. Two areas where the languages differ by
-default, both found by differential-testing the Python port against the
-TypeScript one rather than by any vector here, are worth vectors of their own
-when someone next touches this directory:
+- **Pure helpers:** `domains`, `punycode`, `iocs`, and the rule loader's
+  `quoteHits`/`renderDetail`.
+- **Scoring:** `scoreSignals`, including the two cross-language traps below.
+- **Checks layer:** `checkContent`; `urlCheck` (`checkUrls`,
+  `checkTyposquat`, `brandImpersonation`, `levenshtein`, `isIpLiteral`,
+  `checkQrCodes`); `checkAttachments`; `receivedChain`
+  (`analyzeReceivedChain`, `isPrivateIp`); `checkAuthentication`, including
+  the forged-Authentication-Results defence and its documented limit;
+  `checkHeaderAnomalies`; and `mapTechniques`.
 
-- **Half-way rounding.** `Math.round(31.5)` is 32; Python's built-in
-  `round(31.5)` is 32 too, but `round(2.5)` is 2 where JavaScript gives 3 —
-  banker's rounding versus half-up. Category scores land on exact halves
-  routinely (28 + 14 × 0.25), so this is reachable, not theoretical.
-- **String collation.** `localeCompare` — which `scoreSignals` uses to break a
-  severity tie — is case-insensitive at the primary level and sorts accented
-  letters next to their base letter. Codepoint comparison, the default in most
-  other languages, does neither: it sorts `"apple"` after `"Zebra"`, and `"Á"`
-  after `"Z"`. Every signal label this package emits is ASCII and title-cased,
-  so nothing currently reaches the disagreement, which is exactly why a vector
-  should pin it before someone adds a label that does. Add them as the Python port reaches each
-module, generating the `expect` value from the TypeScript implementation
-(the reference) rather than hand-deriving it — see the git history of this
-directory for how the existing vectors were produced.
+Not yet vectored: `combineResults`, the output builders (`buildSigmaRule`,
+`buildKqlQuery`, `buildRecommendations`, `extractIocs`), and the parsers
+(`parseEmail`, `parseMsg`), whose inputs are raw messages rather than
+JSON-shaped data. The rule engine's own internals (`Rule`, `RuleContext`,
+`Ruleset`, `evaluateRuleset`) aren't vectorable directly, because they hold
+or take a live callable. Both implementations satisfy every vector here.
+
+Two places where the languages differ by default. Both were found by
+differential-testing the Python port against the TypeScript one, and both
+are now pinned by `vectors/signals/score-signals-rounding-and-collation.json`:
+
+- **Half-way rounding.** JavaScript's `Math.round` rounds a half up; Python's
+  built-in `round` is banker's rounding (`round(2.5)` is 2). Category scores
+  land on exact halves (28 + 3 × 6 × 0.25 = 32.5), so the Python port uses an
+  explicit half-up helper.
+- **String collation.** `localeCompare`, which `scoreSignals` uses to break a
+  severity tie, is case-insensitive at the primary level, sorts accented
+  letters next to their base letter, and puts lowercase before uppercase when
+  that is the only difference. Codepoint comparison does none of these. Every
+  label this package emits today is ASCII and title-cased, so the vectors
+  exist to catch the day one isn't.

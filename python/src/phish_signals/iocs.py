@@ -61,9 +61,7 @@ def _ioc(ioc_type: IocType, value: str) -> Ioc:
 # Unicode-aware by default, which would let a Cyrillic lookalike address
 # through a check written to accept only ASCII mail-safe characters — exactly
 # backwards for this package's purposes.
-_ADDRESS_PATTERN = re.compile(
-    r"[\w.+-]+@[\w.-]+\.[a-z]{2,}", re.IGNORECASE | re.ASCII
-)
+_ADDRESS_PATTERN = re.compile(r"[\w.+-]+@[\w.-]+\.[a-z]{2,}", re.IGNORECASE | re.ASCII)
 
 
 def _address_of(header_value: str | None) -> str | None:
@@ -148,15 +146,11 @@ def extract_iocs(
 _HASH_PATTERN = re.compile(
     r"^[a-f0-9]{32}$|^[a-f0-9]{40}$|^[a-f0-9]{64}$", re.IGNORECASE | re.ASCII
 )
-_EMAIL_PATTERN = re.compile(
-    r"^[\w.+-]+@[\w-]+(\.[\w-]+)+$", re.IGNORECASE | re.ASCII
-)
+_EMAIL_PATTERN = re.compile(r"^[\w.+-]+@[\w-]+(\.[\w-]+)+$", re.IGNORECASE | re.ASCII)
 _IPV4_PATTERN = re.compile(r"^\d{1,3}(\.\d{1,3}){3}$", re.ASCII)
 _IPV6_PATTERN = re.compile(r"^[a-f0-9:]{2,}$", re.IGNORECASE | re.ASCII)
 _SCHEME_PATTERN = re.compile(r"^https?://", re.IGNORECASE | re.ASCII)
-_HOST_AND_PATH_PATTERN = re.compile(
-    r"^([a-z0-9.-]+)(/\S*)$", re.IGNORECASE | re.ASCII
-)
+_HOST_AND_PATH_PATTERN = re.compile(r"^([a-z0-9.-]+)(/\S*)$", re.IGNORECASE | re.ASCII)
 _EXTENSION_PATTERN = re.compile(r"\.[a-z0-9]+$", re.ASCII)
 _SURROUNDING_PUNCTUATION = re.compile(r"^[\[<(]+|[\]>),.;:!?]+$")
 
@@ -169,13 +163,52 @@ _SURROUNDING_PUNCTUATION = re.compile(r"^[\[<(]+|[\]>),.;:!?]+$")
 # known phishing trick), so a bare "example.zip" pasted with no path still
 # reads as a filename here — an accepted residual ambiguity, not a gap worth a
 # heavier disambiguation pass for two rare TLDs.
-_FILENAME_EXTENSIONS = frozenset({
-    ".exe", ".dll", ".scr", ".bat", ".cmd", ".pif", ".vbs", ".vbe",
-    ".js", ".jse", ".wsf", ".wsh", ".msi", ".msp", ".ps1", ".psm1", ".jar",
-    ".hta", ".cpl", ".reg", ".lnk", ".iso", ".docm", ".xlsm", ".pptm",
-    ".dotm", ".xltm", ".potm", ".xlam", ".xlsb", ".doc", ".docx", ".xls",
-    ".xlsx", ".ppt", ".pptx", ".pdf", ".zip", ".rar", ".7z", ".rtf", ".one",
-})
+_FILENAME_EXTENSIONS = frozenset(
+    {
+        ".exe",
+        ".dll",
+        ".scr",
+        ".bat",
+        ".cmd",
+        ".pif",
+        ".vbs",
+        ".vbe",
+        ".js",
+        ".jse",
+        ".wsf",
+        ".wsh",
+        ".msi",
+        ".msp",
+        ".ps1",
+        ".psm1",
+        ".jar",
+        ".hta",
+        ".cpl",
+        ".reg",
+        ".lnk",
+        ".iso",
+        ".docm",
+        ".xlsm",
+        ".pptm",
+        ".dotm",
+        ".xltm",
+        ".potm",
+        ".xlam",
+        ".xlsb",
+        ".doc",
+        ".docx",
+        ".xls",
+        ".xlsx",
+        ".ppt",
+        ".pptx",
+        ".pdf",
+        ".zip",
+        ".rar",
+        ".7z",
+        ".rtf",
+        ".one",
+    }
+)
 
 # A domain needs a plausible alphabetic TLD — this alone is what keeps
 # "invoice.exe" from being misread as a two-label hostname once the filename

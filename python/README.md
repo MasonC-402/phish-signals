@@ -7,9 +7,8 @@ second implementation held to the same behavior via
 
 **Status: fully ported.** Every module in `typescript/src/` has a Python
 counterpart under `src/phish_signals/`, passing every conformance vector
-currently in the suite (see `../conformance/`, which only vectors the pure,
-zero-dependency layer so far — the larger surface has no vectors yet on
-either side). `phish_signals.IMPLEMENTED_MODULES` is the machine-readable
+in the suite (see `../conformance/`: the pure helpers, scoring, and most of
+the checks layer; the parsers and output builders aren't vectored yet). `phish_signals.IMPLEMENTED_MODULES` is the machine-readable
 list of what's behind it, which at this point is everything.
 
 Managed with [uv](https://docs.astral.sh/uv/).
