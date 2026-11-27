@@ -1,0 +1,439 @@
+{
+  "module": "authCheck",
+  "function": "checkAuthentication",
+  "cases": [
+    {
+      "name": "no headers at all (pasted body text)",
+      "args": [
+        null,
+        []
+      ],
+      "expect": {
+        "available": false,
+        "passed": false,
+        "signals": [],
+        "selectedAuthservId": null
+      }
+    },
+    {
+      "name": "SPF, DKIM and DMARC all pass",
+      "args": [
+        {
+          "$map": {
+            "from": "Alice <alice@example.com>",
+            "authentication-results": "mx.example.com; spf=pass smtp.mailfrom=example.com; dkim=pass header.d=example.com; dmarc=pass header.from=example.com"
+          }
+        },
+        [
+          {
+            "key": "from",
+            "line": "From: Alice <alice@example.com>"
+          },
+          {
+            "key": "authentication-results",
+            "line": "Authentication-Results: mx.example.com; spf=pass smtp.mailfrom=example.com; dkim=pass header.d=example.com; dmarc=pass header.from=example.com"
+          }
+        ]
+      ],
+      "expect": {
+        "available": true,
+        "passed": true,
+        "signals": [
+          {
+            "id": "auth_fully_passed",
+            "category": "authentication",
+            "severity": "info",
+            "benign": true,
+            "label": "Sender Authentication Passed",
+            "detail": "SPF, DKIM and DMARC all passed, so the message genuinely came from the domain it claims. That confirms the sender, not their intent — a compromised account passes every one of these."
+          }
+        ],
+        "selectedAuthservId": "mx.example.com"
+      }
+    },
+    {
+      "name": "everything fails",
+      "args": [
+        {
+          "$map": {
+            "from": "PayPal <service@paypal.com>",
+            "authentication-results": "mx.example.com; spf=fail; dkim=fail; dmarc=fail"
+          }
+        },
+        [
+          {
+            "key": "from",
+            "line": "From: PayPal <service@paypal.com>"
+          },
+          {
+            "key": "authentication-results",
+            "line": "Authentication-Results: mx.example.com; spf=fail; dkim=fail; dmarc=fail"
+          }
+        ]
+      ],
+      "expect": {
+        "available": true,
+        "passed": false,
+        "signals": [
+          {
+            "id": "dmarc_fail",
+            "category": "authentication",
+            "severity": "high",
+            "label": "DMARC Failure",
+            "detail": "The message failed DMARC. It is not authorized by the domain it claims to come from — the strongest single indicator of sender spoofing available from headers alone.",
+            "mitre": [
+              "T1656"
+            ]
+          },
+          {
+            "id": "spf_fail",
+            "category": "authentication",
+            "severity": "medium",
+            "label": "SPF Failure",
+            "detail": "The sending server is not on the list of servers authorized to send for this domain.",
+            "mitre": [
+              "T1656"
+            ]
+          },
+          {
+            "id": "dkim_fail",
+            "category": "authentication",
+            "severity": "medium",
+            "label": "DKIM Failure",
+            "detail": "The cryptographic signature did not validate. The message content or its headers were altered after signing, or the signature was forged outright.",
+            "mitre": [
+              "T1656"
+            ]
+          }
+        ],
+        "selectedAuthservId": "mx.example.com"
+      }
+    },
+    {
+      "name": "SPF softfail, DKIM none, DMARC none",
+      "args": [
+        {
+          "$map": {
+            "from": "x@example.org"
+          }
+        },
+        [
+          {
+            "key": "from",
+            "line": "From: x@example.org"
+          },
+          {
+            "key": "authentication-results",
+            "line": "Authentication-Results: mx.example.com; spf=softfail; dkim=none; dmarc=none"
+          }
+        ]
+      ],
+      "expect": {
+        "available": true,
+        "passed": false,
+        "signals": [
+          {
+            "id": "dmarc_none",
+            "category": "authentication",
+            "severity": "low",
+            "label": "No DMARC Policy",
+            "detail": "The sending domain publishes no DMARC policy, so nothing prevents another server from spoofing it and nothing here can confirm the sender either way."
+          },
+          {
+            "id": "spf_softfail",
+            "category": "authentication",
+            "severity": "low",
+            "label": "SPF Softfail",
+            "detail": "SPF returned a soft failure or neutral result, so the sending server is only weakly authorized for this domain."
+          },
+          {
+            "id": "dkim_none",
+            "category": "authentication",
+            "severity": "low",
+            "label": "No DKIM Signature",
+            "detail": "The message was not signed with DKIM, so there is no cryptographic evidence tying it to the sending domain."
+          }
+        ],
+        "selectedAuthservId": "mx.example.com"
+      }
+    },
+    {
+      "name": "headers present but no Authentication-Results",
+      "args": [
+        {
+          "$map": {
+            "from": "x@example.org"
+          }
+        },
+        [
+          {
+            "key": "from",
+            "line": "From: x@example.org"
+          }
+        ]
+      ],
+      "expect": {
+        "available": true,
+        "passed": false,
+        "signals": [
+          {
+            "id": "no_auth_results",
+            "category": "authentication",
+            "severity": "low",
+            "label": "No Authentication Results",
+            "detail": "This message carries no Authentication-Results header, so SPF/DKIM/DMARC couldn't be checked at all. Common for mail that bypassed normal filtering, and it means the checks below are working with less to go on."
+          }
+        ],
+        "selectedAuthservId": null
+      }
+    },
+    {
+      "name": "Reply-To on a different domain than From",
+      "args": [
+        {
+          "$map": {
+            "from": "ceo@company.example",
+            "reply-to": "ceo.private@freemail.example"
+          }
+        },
+        [
+          {
+            "key": "from",
+            "line": "From: ceo@company.example"
+          },
+          {
+            "key": "reply-to",
+            "line": "Reply-To: ceo.private@freemail.example"
+          },
+          {
+            "key": "authentication-results",
+            "line": "Authentication-Results: mx.example.com; spf=pass; dkim=pass; dmarc=pass"
+          }
+        ]
+      ],
+      "expect": {
+        "available": true,
+        "passed": true,
+        "signals": [
+          {
+            "id": "reply_to_mismatch",
+            "category": "identity",
+            "severity": "medium",
+            "label": "Replies Go to a Different Domain",
+            "detail": "Hitting reply sends your response to \"freemail.example\", not \"company.example\". This is how a conversation gets quietly redirected to the attacker, and it is the standard setup for business email compromise.",
+            "mitre": [
+              "T1656"
+            ]
+          },
+          {
+            "id": "auth_fully_passed",
+            "category": "authentication",
+            "severity": "info",
+            "benign": true,
+            "label": "Sender Authentication Passed",
+            "detail": "SPF, DKIM and DMARC all passed, so the message genuinely came from the domain it claims. That confirms the sender, not their intent — a compromised account passes every one of these."
+          }
+        ],
+        "selectedAuthservId": "mx.example.com"
+      }
+    },
+    {
+      "name": "Return-Path on a different domain than From",
+      "args": [
+        {
+          "$map": {
+            "from": "billing@vendor.example",
+            "return-path": "<bounce@bulk-sender.example>"
+          }
+        },
+        [
+          {
+            "key": "return-path",
+            "line": "Return-Path: <bounce@bulk-sender.example>"
+          },
+          {
+            "key": "from",
+            "line": "From: billing@vendor.example"
+          }
+        ]
+      ],
+      "expect": {
+        "available": true,
+        "passed": false,
+        "signals": [
+          {
+            "id": "no_auth_results",
+            "category": "authentication",
+            "severity": "low",
+            "label": "No Authentication Results",
+            "detail": "This message carries no Authentication-Results header, so SPF/DKIM/DMARC couldn't be checked at all. Common for mail that bypassed normal filtering, and it means the checks below are working with less to go on."
+          },
+          {
+            "id": "return_path_mismatch",
+            "category": "identity",
+            "severity": "low",
+            "label": "Return-Path Mismatch",
+            "detail": "Bounces for this message go to \"bulk-sender.example\" while it claims to be from \"vendor.example\". Normal for mail sent through a newsletter tool or CRM, so weigh it alongside the other findings rather than on its own."
+          }
+        ],
+        "selectedAuthservId": null
+      }
+    },
+    {
+      "name": "sender domain is a typosquat of a known brand",
+      "args": [
+        {
+          "$map": {
+            "from": "PayPal <service@paypa1.com>"
+          }
+        },
+        [
+          {
+            "key": "from",
+            "line": "From: PayPal <service@paypa1.com>"
+          }
+        ]
+      ],
+      "expect": {
+        "available": true,
+        "passed": false,
+        "signals": [
+          {
+            "id": "no_auth_results",
+            "category": "authentication",
+            "severity": "low",
+            "label": "No Authentication Results",
+            "detail": "This message carries no Authentication-Results header, so SPF/DKIM/DMARC couldn't be checked at all. Common for mail that bypassed normal filtering, and it means the checks below are working with less to go on."
+          },
+          {
+            "id": "sender_domain_typosquat",
+            "category": "identity",
+            "severity": "high",
+            "label": "From Domain Resembles a Known Brand",
+            "detail": "The message's From is \"paypa1.com\", which closely resembles \"paypal.com\" — a likely typosquat rather than the real domain. This is an actual identity in the message, not just a link destination.",
+            "mitre": [
+              "T1656"
+            ]
+          }
+        ],
+        "selectedAuthservId": null
+      }
+    },
+    {
+      "name": "forged trailing Authentication-Results (spf/dkim/dmarc=pass) beyond the Received count is discarded; the real receiving server's fail wins",
+      "args": [
+        {
+          "$map": {
+            "from": "a@example.com",
+            "authentication-results": "mx.example.com; spf=fail; dkim=fail; dmarc=fail"
+          }
+        },
+        [
+          {
+            "key": "received",
+            "line": "Received: from mx.example.com (mx.example.com [198.51.100.1]) by inbound.example.com with ESMTP; Mon, 1 Jan 2024 10:00:00 +0000"
+          },
+          {
+            "key": "authentication-results",
+            "line": "Authentication-Results: mx.example.com; spf=fail; dkim=fail; dmarc=fail"
+          },
+          {
+            "key": "from",
+            "line": "From: a@example.com"
+          },
+          {
+            "key": "authentication-results",
+            "line": "Authentication-Results: attacker.example; spf=pass; dkim=pass; dmarc=pass"
+          }
+        ]
+      ],
+      "expect": {
+        "available": true,
+        "passed": false,
+        "signals": [
+          {
+            "id": "forged_authentication_results_header",
+            "category": "authentication",
+            "severity": "high",
+            "label": "Authentication-Results Header Predates Real Delivery",
+            "detail": "The message carries more Authentication-Results headers than it has Received headers to have stamped them — meaning at least one could not have been added by a real mail server relaying the message, and was instead already present in the content as sent. A real server only ever adds this header at the moment it performs the check, never earlier. The extra header was ignored when determining SPF/DKIM/DMARC status below.",
+            "mitre": [
+              "T1656"
+            ]
+          },
+          {
+            "id": "dmarc_fail",
+            "category": "authentication",
+            "severity": "high",
+            "label": "DMARC Failure",
+            "detail": "The message failed DMARC. It is not authorized by the domain it claims to come from — the strongest single indicator of sender spoofing available from headers alone.",
+            "mitre": [
+              "T1656"
+            ]
+          },
+          {
+            "id": "spf_fail",
+            "category": "authentication",
+            "severity": "medium",
+            "label": "SPF Failure",
+            "detail": "The sending server is not on the list of servers authorized to send for this domain.",
+            "mitre": [
+              "T1656"
+            ]
+          },
+          {
+            "id": "dkim_fail",
+            "category": "authentication",
+            "severity": "medium",
+            "label": "DKIM Failure",
+            "detail": "The cryptographic signature did not validate. The message content or its headers were altered after signing, or the signature was forged outright.",
+            "mitre": [
+              "T1656"
+            ]
+          }
+        ],
+        "selectedAuthservId": "mx.example.com"
+      }
+    },
+    {
+      "name": "documented limitation: with no Received headers to anchor against, every Authentication-Results is kept and the oldest (here a forged pass) wins",
+      "args": [
+        {
+          "$map": {
+            "from": "a@example.com",
+            "authentication-results": "mx.example.com; spf=fail; dkim=fail; dmarc=fail"
+          }
+        },
+        [
+          {
+            "key": "authentication-results",
+            "line": "Authentication-Results: mx.example.com; spf=fail; dkim=fail; dmarc=fail"
+          },
+          {
+            "key": "from",
+            "line": "From: a@example.com"
+          },
+          {
+            "key": "authentication-results",
+            "line": "Authentication-Results: attacker.example; spf=pass; dkim=pass; dmarc=pass"
+          }
+        ]
+      ],
+      "expect": {
+        "available": true,
+        "passed": true,
+        "signals": [
+          {
+            "id": "auth_fully_passed",
+            "category": "authentication",
+            "severity": "info",
+            "benign": true,
+            "label": "Sender Authentication Passed",
+            "detail": "SPF, DKIM and DMARC all passed, so the message genuinely came from the domain it claims. That confirms the sender, not their intent — a compromised account passes every one of these."
+          }
+        ],
+        "selectedAuthservId": "attacker.example"
+      }
+    }
+  ]
+}

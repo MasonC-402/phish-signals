@@ -1,0 +1,38 @@
+{
+  "module": "urlCheck",
+  "function": "levenshtein",
+  "cases": [
+    {
+      "name": "identical",
+      "args": [
+        "paypal",
+        "paypal"
+      ],
+      "expect": 0
+    },
+    {
+      "name": "one substitution",
+      "args": [
+        "paypal",
+        "paypa1"
+      ],
+      "expect": 1
+    },
+    {
+      "name": "empty vs non-empty",
+      "args": [
+        "",
+        "abc"
+      ],
+      "expect": 3
+    },
+    {
+      "name": "classic kitten/sitting",
+      "args": [
+        "kitten",
+        "sitting"
+      ],
+      "expect": 3
+    }
+  ]
+}

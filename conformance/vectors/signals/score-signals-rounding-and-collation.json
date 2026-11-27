@@ -1,0 +1,459 @@
+{
+  "module": "signals",
+  "function": "scoreSignals",
+  "cases": [
+    {
+      "name": "category score lands on .5 with an even floor (28 + 3×6×0.25 = 32.5): half-up gives 33, banker's rounding would give 32",
+      "args": [
+        [
+          {
+            "id": "a",
+            "category": "payload",
+            "severity": "high",
+            "label": "A",
+            "detail": "d"
+          },
+          {
+            "id": "b",
+            "category": "payload",
+            "severity": "low",
+            "label": "B",
+            "detail": "d"
+          },
+          {
+            "id": "c",
+            "category": "payload",
+            "severity": "low",
+            "label": "C",
+            "detail": "d"
+          },
+          {
+            "id": "e",
+            "category": "payload",
+            "severity": "low",
+            "label": "E",
+            "detail": "d"
+          }
+        ]
+      ],
+      "expect": {
+        "score": 33,
+        "verdict": "Medium Risk",
+        "categories": [
+          {
+            "category": "payload",
+            "label": "Links & Attachments",
+            "score": 33,
+            "signals": [
+              {
+                "id": "a",
+                "category": "payload",
+                "severity": "high",
+                "label": "A",
+                "detail": "d"
+              },
+              {
+                "id": "b",
+                "category": "payload",
+                "severity": "low",
+                "label": "B",
+                "detail": "d"
+              },
+              {
+                "id": "c",
+                "category": "payload",
+                "severity": "low",
+                "label": "C",
+                "detail": "d"
+              },
+              {
+                "id": "e",
+                "category": "payload",
+                "severity": "low",
+                "label": "E",
+                "detail": "d"
+              }
+            ]
+          }
+        ],
+        "signals": [
+          {
+            "id": "a",
+            "category": "payload",
+            "severity": "high",
+            "label": "A",
+            "detail": "d"
+          },
+          {
+            "id": "b",
+            "category": "payload",
+            "severity": "low",
+            "label": "B",
+            "detail": "d"
+          },
+          {
+            "id": "c",
+            "category": "payload",
+            "severity": "low",
+            "label": "C",
+            "detail": "d"
+          },
+          {
+            "id": "e",
+            "category": "payload",
+            "severity": "low",
+            "label": "E",
+            "detail": "d"
+          }
+        ],
+        "benignSignals": []
+      }
+    },
+    {
+      "name": "critical plus one medium corroborator (45 + 14×0.25 = 48.5): half-up gives 49, banker's would give 48",
+      "args": [
+        [
+          {
+            "id": "a",
+            "category": "identity",
+            "severity": "critical",
+            "label": "A",
+            "detail": "d"
+          },
+          {
+            "id": "b",
+            "category": "identity",
+            "severity": "medium",
+            "label": "B",
+            "detail": "d"
+          }
+        ]
+      ],
+      "expect": {
+        "score": 49,
+        "verdict": "Medium Risk",
+        "categories": [
+          {
+            "category": "identity",
+            "label": "Sender Identity",
+            "score": 49,
+            "signals": [
+              {
+                "id": "a",
+                "category": "identity",
+                "severity": "critical",
+                "label": "A",
+                "detail": "d"
+              },
+              {
+                "id": "b",
+                "category": "identity",
+                "severity": "medium",
+                "label": "B",
+                "detail": "d"
+              }
+            ]
+          }
+        ],
+        "signals": [
+          {
+            "id": "a",
+            "category": "identity",
+            "severity": "critical",
+            "label": "A",
+            "detail": "d"
+          },
+          {
+            "id": "b",
+            "category": "identity",
+            "severity": "medium",
+            "label": "B",
+            "detail": "d"
+          }
+        ],
+        "benignSignals": []
+      }
+    },
+    {
+      "name": "odd-floor half (14 + 6×0.25 = 15.5): both roundings agree on 16 — control case",
+      "args": [
+        [
+          {
+            "id": "a",
+            "category": "social",
+            "severity": "medium",
+            "label": "A",
+            "detail": "d"
+          },
+          {
+            "id": "b",
+            "category": "social",
+            "severity": "low",
+            "label": "B",
+            "detail": "d"
+          }
+        ]
+      ],
+      "expect": {
+        "score": 16,
+        "verdict": "Low Risk",
+        "categories": [
+          {
+            "category": "social",
+            "label": "Social Engineering",
+            "score": 16,
+            "signals": [
+              {
+                "id": "a",
+                "category": "social",
+                "severity": "medium",
+                "label": "A",
+                "detail": "d"
+              },
+              {
+                "id": "b",
+                "category": "social",
+                "severity": "low",
+                "label": "B",
+                "detail": "d"
+              }
+            ]
+          }
+        ],
+        "signals": [
+          {
+            "id": "a",
+            "category": "social",
+            "severity": "medium",
+            "label": "A",
+            "detail": "d"
+          },
+          {
+            "id": "b",
+            "category": "social",
+            "severity": "low",
+            "label": "B",
+            "detail": "d"
+          }
+        ],
+        "benignSignals": []
+      }
+    },
+    {
+      "name": "severity tie broken case-insensitively: 'apple' sorts before 'Zebra' (codepoint order would put it after)",
+      "args": [
+        [
+          {
+            "id": "z",
+            "category": "social",
+            "severity": "low",
+            "label": "Zebra",
+            "detail": "d"
+          },
+          {
+            "id": "a",
+            "category": "social",
+            "severity": "low",
+            "label": "apple",
+            "detail": "d"
+          }
+        ]
+      ],
+      "expect": {
+        "score": 8,
+        "verdict": "Low Risk",
+        "categories": [
+          {
+            "category": "social",
+            "label": "Social Engineering",
+            "score": 8,
+            "signals": [
+              {
+                "id": "a",
+                "category": "social",
+                "severity": "low",
+                "label": "apple",
+                "detail": "d"
+              },
+              {
+                "id": "z",
+                "category": "social",
+                "severity": "low",
+                "label": "Zebra",
+                "detail": "d"
+              }
+            ]
+          }
+        ],
+        "signals": [
+          {
+            "id": "a",
+            "category": "social",
+            "severity": "low",
+            "label": "apple",
+            "detail": "d"
+          },
+          {
+            "id": "z",
+            "category": "social",
+            "severity": "low",
+            "label": "Zebra",
+            "detail": "d"
+          }
+        ],
+        "benignSignals": []
+      }
+    },
+    {
+      "name": "severity tie with an accented label: 'Ápple' sorts next to A, before 'Banana' (codepoint order would put it after 'Zulu')",
+      "args": [
+        [
+          {
+            "id": "z",
+            "category": "social",
+            "severity": "low",
+            "label": "Zulu",
+            "detail": "d"
+          },
+          {
+            "id": "b",
+            "category": "social",
+            "severity": "low",
+            "label": "Banana",
+            "detail": "d"
+          },
+          {
+            "id": "a",
+            "category": "social",
+            "severity": "low",
+            "label": "Ápple",
+            "detail": "d"
+          }
+        ]
+      ],
+      "expect": {
+        "score": 9,
+        "verdict": "Low Risk",
+        "categories": [
+          {
+            "category": "social",
+            "label": "Social Engineering",
+            "score": 9,
+            "signals": [
+              {
+                "id": "a",
+                "category": "social",
+                "severity": "low",
+                "label": "Ápple",
+                "detail": "d"
+              },
+              {
+                "id": "b",
+                "category": "social",
+                "severity": "low",
+                "label": "Banana",
+                "detail": "d"
+              },
+              {
+                "id": "z",
+                "category": "social",
+                "severity": "low",
+                "label": "Zulu",
+                "detail": "d"
+              }
+            ]
+          }
+        ],
+        "signals": [
+          {
+            "id": "a",
+            "category": "social",
+            "severity": "low",
+            "label": "Ápple",
+            "detail": "d"
+          },
+          {
+            "id": "b",
+            "category": "social",
+            "severity": "low",
+            "label": "Banana",
+            "detail": "d"
+          },
+          {
+            "id": "z",
+            "category": "social",
+            "severity": "low",
+            "label": "Zulu",
+            "detail": "d"
+          }
+        ],
+        "benignSignals": []
+      }
+    },
+    {
+      "name": "labels differing only in case: localeCompare puts lowercase first",
+      "args": [
+        [
+          {
+            "id": "u",
+            "category": "social",
+            "severity": "low",
+            "label": "Apple",
+            "detail": "d"
+          },
+          {
+            "id": "l",
+            "category": "social",
+            "severity": "low",
+            "label": "apple",
+            "detail": "d"
+          }
+        ]
+      ],
+      "expect": {
+        "score": 8,
+        "verdict": "Low Risk",
+        "categories": [
+          {
+            "category": "social",
+            "label": "Social Engineering",
+            "score": 8,
+            "signals": [
+              {
+                "id": "l",
+                "category": "social",
+                "severity": "low",
+                "label": "apple",
+                "detail": "d"
+              },
+              {
+                "id": "u",
+                "category": "social",
+                "severity": "low",
+                "label": "Apple",
+                "detail": "d"
+              }
+            ]
+          }
+        ],
+        "signals": [
+          {
+            "id": "l",
+            "category": "social",
+            "severity": "low",
+            "label": "apple",
+            "detail": "d"
+          },
+          {
+            "id": "u",
+            "category": "social",
+            "severity": "low",
+            "label": "Apple",
+            "detail": "d"
+          }
+        ],
+        "benignSignals": []
+      }
+    }
+  ]
+}

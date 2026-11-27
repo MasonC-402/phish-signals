@@ -18,6 +18,12 @@ import * as iocs from '../src/iocs';
 import * as signals from '../src/signals';
 import * as contentCheck from '../src/contentCheck';
 import * as rulesLoader from '../src/rules/loader';
+import * as urlCheck from '../src/urlCheck';
+import * as attachmentCheck from '../src/attachmentCheck';
+import * as receivedChain from '../src/receivedChain';
+import * as authCheck from '../src/authCheck';
+import * as headerAnomalies from '../src/headerAnomalies';
+import * as mitre from '../src/mitre';
 
 // One entry per module a vector file's "module" field can name. Extend this
 // as more modules gain conformance coverage — see the "Coverage" section of
@@ -42,7 +48,29 @@ const MODULES: Record<string, Record<string, unknown>> = {
   signals,
   contentCheck,
   rules: rulesLoader,
+  urlCheck,
+  attachmentCheck,
+  receivedChain,
+  authCheck,
+  headerAnomalies,
+  mitre,
 };
+
+// JSON has no Map, but checkAuthentication/checkHeaderAnomalies take their
+// headers as one (mailparser's shape). A vector writes such an argument as
+// {"$map": {...}}; the Python harness decodes the same marker to a dict.
+// Mirrored in conformance/fill-expect.js.
+function decodeArg(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(decodeArg);
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>);
+    if (entries.length === 1 && entries[0][0] === '$map') {
+      return new Map(Object.entries(entries[0][1] as Record<string, unknown>));
+    }
+    return Object.fromEntries(entries.map(([k, v]) => [k, decodeArg(v)]));
+  }
+  return value;
+}
 
 interface VectorCase {
   name: string;
@@ -86,8 +114,10 @@ for (const path of findVectorFiles(VECTORS_DIR)) {
     const fn = target as (...args: unknown[]) => unknown;
     for (const c of vectorFile.cases) {
       await t.test(c.name, () => {
-        const args = c.args ?? [c.input];
-        assert.deepStrictEqual(fn(...args), c.expect);
+        const args = (c.args ?? [c.input]).map(decodeArg);
+        // JSON round-trip: compare the value as a JSON consumer sees it, so a
+        // key present-but-undefined and a key absent compare equal.
+        assert.deepStrictEqual(JSON.parse(JSON.stringify(fn(...args)) ?? 'null'), c.expect);
       });
     }
   });

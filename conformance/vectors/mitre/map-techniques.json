@@ -1,0 +1,93 @@
+{
+  "module": "mitre",
+  "function": "mapTechniques",
+  "cases": [
+    {
+      "name": "no signals",
+      "args": [
+        []
+      ],
+      "expect": []
+    },
+    {
+      "name": "techniques deduplicated and returned in a stable order",
+      "args": [
+        [
+          {
+            "id": "a",
+            "category": "payload",
+            "severity": "high",
+            "label": "A",
+            "detail": "d",
+            "mitre": [
+              "T1566.002",
+              "T1204.001"
+            ]
+          },
+          {
+            "id": "b",
+            "category": "social",
+            "severity": "medium",
+            "label": "B",
+            "detail": "d",
+            "mitre": [
+              "T1566.002"
+            ]
+          }
+        ]
+      ],
+      "expect": [
+        {
+          "id": "T1204.001",
+          "name": "User Execution: Malicious Link",
+          "url": "https://attack.mitre.org/techniques/T1204/001/"
+        },
+        {
+          "id": "T1566.002",
+          "name": "Phishing: Spearphishing Link",
+          "url": "https://attack.mitre.org/techniques/T1566/002/"
+        }
+      ]
+    },
+    {
+      "name": "unknown technique ids are dropped",
+      "args": [
+        [
+          {
+            "id": "a",
+            "category": "payload",
+            "severity": "low",
+            "label": "A",
+            "detail": "d",
+            "mitre": [
+              "T9999.999",
+              "T1566"
+            ]
+          }
+        ]
+      ],
+      "expect": [
+        {
+          "id": "T1566",
+          "name": "Phishing",
+          "url": "https://attack.mitre.org/techniques/T1566/"
+        }
+      ]
+    },
+    {
+      "name": "signals without a mitre field contribute nothing",
+      "args": [
+        [
+          {
+            "id": "a",
+            "category": "payload",
+            "severity": "low",
+            "label": "A",
+            "detail": "d"
+          }
+        ]
+      ],
+      "expect": []
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "module": "urlCheck",
+  "function": "isIpLiteral",
+  "cases": [
+    {
+      "name": "dotted IPv4",
+      "input": "10.0.0.1",
+      "expect": true
+    },
+    {
+      "name": "bracketed IPv6",
+      "input": "[::1]",
+      "expect": true
+    },
+    {
+      "name": "hostname",
+      "input": "example.com",
+      "expect": false
+    },
+    {
+      "name": "bare decimal integer counts as an IP literal by design (http://3232235777/ is a real IPv4 form)",
+      "input": "123",
+      "expect": true
+    }
+  ]
+}

@@ -1,0 +1,281 @@
+{
+  "module": "receivedChain",
+  "function": "analyzeReceivedChain",
+  "cases": [
+    {
+      "name": "no Received headers",
+      "args": [
+        []
+      ],
+      "expect": {
+        "hops": [],
+        "originIp": null,
+        "originHost": null,
+        "signals": []
+      }
+    },
+    {
+      "name": "single external hop",
+      "args": [
+        [
+          {
+            "key": "received",
+            "line": "Received: from mail.sender.example (mail.sender.example [203.0.113.5]) by mx.recipient.example with ESMTPS id abc; Mon, 1 Jan 2024 10:00:00 +0000"
+          }
+        ]
+      ],
+      "expect": {
+        "hops": [
+          {
+            "index": 0,
+            "helo": "mail.sender.example",
+            "reverseDns": "mail.sender.example",
+            "ip": "203.0.113.5",
+            "by": "mx.recipient.example",
+            "timestamp": "Mon, 1 Jan 2024 10:00:00 +0000",
+            "heloMismatch": false,
+            "private": false
+          }
+        ],
+        "originIp": "203.0.113.5",
+        "originHost": "mail.sender.example",
+        "signals": [
+          {
+            "id": "single_hop_delivery",
+            "category": "infrastructure",
+            "severity": "low",
+            "label": "Direct Delivery, No Relay Path",
+            "detail": "The message records only one hop. Legitimate mail from an established provider almost always shows several. A single hop is typical of a script or host connecting straight to the recipient mail server."
+          }
+        ]
+      }
+    },
+    {
+      "name": "two hops, origin is the bottom-most",
+      "args": [
+        [
+          {
+            "key": "received",
+            "line": "Received: from relay.recipient.example (relay.recipient.example [198.51.100.7]) by mx.recipient.example with ESMTP id x1; Mon, 1 Jan 2024 10:00:05 +0000"
+          },
+          {
+            "key": "received",
+            "line": "Received: from mail.sender.example (mail.sender.example [203.0.113.5]) by relay.recipient.example with ESMTP id x2; Mon, 1 Jan 2024 10:00:00 +0000"
+          }
+        ]
+      ],
+      "expect": {
+        "hops": [
+          {
+            "index": 0,
+            "helo": "mail.sender.example",
+            "reverseDns": "mail.sender.example",
+            "ip": "203.0.113.5",
+            "by": "relay.recipient.example",
+            "timestamp": "Mon, 1 Jan 2024 10:00:00 +0000",
+            "heloMismatch": false,
+            "private": false
+          },
+          {
+            "index": 1,
+            "helo": "relay.recipient.example",
+            "reverseDns": "relay.recipient.example",
+            "ip": "198.51.100.7",
+            "by": "mx.recipient.example",
+            "timestamp": "Mon, 1 Jan 2024 10:00:05 +0000",
+            "heloMismatch": false,
+            "private": false
+          }
+        ],
+        "originIp": "203.0.113.5",
+        "originHost": "mail.sender.example",
+        "signals": []
+      }
+    },
+    {
+      "name": "HELO name disagrees with reverse DNS",
+      "args": [
+        [
+          {
+            "key": "received",
+            "line": "Received: from paypal.com (unknown.badhost.example [203.0.113.9]) by mx.recipient.example with SMTP id y; Mon, 1 Jan 2024 10:00:00 +0000"
+          }
+        ]
+      ],
+      "expect": {
+        "hops": [
+          {
+            "index": 0,
+            "helo": "paypal.com",
+            "reverseDns": "unknown.badhost.example",
+            "ip": "203.0.113.9",
+            "by": "mx.recipient.example",
+            "timestamp": "Mon, 1 Jan 2024 10:00:00 +0000",
+            "heloMismatch": true,
+            "private": false
+          }
+        ],
+        "originIp": "203.0.113.9",
+        "originHost": "unknown.badhost.example",
+        "signals": [
+          {
+            "id": "helo_brand_impersonation",
+            "category": "infrastructure",
+            "severity": "high",
+            "label": "Sending Server Impersonates a Brand",
+            "detail": "A relay announced itself as \"paypal.com\" but the receiving server resolved the connection back to \"unknown.badhost.example\" (203.0.113.9). The sending machine is not what it claimed to be.",
+            "mitre": [
+              "T1656"
+            ]
+          },
+          {
+            "id": "single_hop_delivery",
+            "category": "infrastructure",
+            "severity": "low",
+            "label": "Direct Delivery, No Relay Path",
+            "detail": "The message records only one hop. Legitimate mail from an established provider almost always shows several. A single hop is typical of a script or host connecting straight to the recipient mail server."
+          }
+        ]
+      }
+    },
+    {
+      "name": "origin in a private address range",
+      "args": [
+        [
+          {
+            "key": "received",
+            "line": "Received: from internal (internal [10.1.2.3]) by mx.recipient.example with SMTP id z; Mon, 1 Jan 2024 10:00:00 +0000"
+          }
+        ]
+      ],
+      "expect": {
+        "hops": [
+          {
+            "index": 0,
+            "helo": "internal",
+            "reverseDns": "internal",
+            "ip": "10.1.2.3",
+            "by": "mx.recipient.example",
+            "timestamp": "Mon, 1 Jan 2024 10:00:00 +0000",
+            "heloMismatch": false,
+            "private": true
+          }
+        ],
+        "originIp": "10.1.2.3",
+        "originHost": "internal",
+        "signals": [
+          {
+            "id": "origin_private_ip",
+            "category": "infrastructure",
+            "severity": "low",
+            "label": "Message Entered From a Private Address",
+            "detail": "The only recorded hop came from 10.1.2.3, a private/internal address. For mail claiming to be from an outside organization, that means it was injected inside a network rather than delivered across the internet.",
+            "mitre": [
+              "T1534"
+            ]
+          },
+          {
+            "id": "single_hop_delivery",
+            "category": "infrastructure",
+            "severity": "low",
+            "label": "Direct Delivery, No Relay Path",
+            "detail": "The message records only one hop. Legitimate mail from an established provider almost always shows several. A single hop is typical of a script or host connecting straight to the recipient mail server."
+          }
+        ]
+      }
+    },
+    {
+      "name": "timestamps go backwards between hops",
+      "args": [
+        [
+          {
+            "key": "received",
+            "line": "Received: from b.example (b.example [198.51.100.2]) by mx.recipient.example with ESMTP id t1; Mon, 1 Jan 2024 09:00:00 +0000"
+          },
+          {
+            "key": "received",
+            "line": "Received: from a.example (a.example [203.0.113.1]) by b.example with ESMTP id t2; Mon, 1 Jan 2024 12:00:00 +0000"
+          }
+        ]
+      ],
+      "expect": {
+        "hops": [
+          {
+            "index": 0,
+            "helo": "a.example",
+            "reverseDns": "a.example",
+            "ip": "203.0.113.1",
+            "by": "b.example",
+            "timestamp": "Mon, 1 Jan 2024 12:00:00 +0000",
+            "heloMismatch": false,
+            "private": false
+          },
+          {
+            "index": 1,
+            "helo": "b.example",
+            "reverseDns": "b.example",
+            "ip": "198.51.100.2",
+            "by": "mx.recipient.example",
+            "timestamp": "Mon, 1 Jan 2024 09:00:00 +0000",
+            "heloMismatch": false,
+            "private": false
+          }
+        ],
+        "originIp": "203.0.113.1",
+        "originHost": "a.example",
+        "signals": [
+          {
+            "id": "received_timestamp_regression",
+            "category": "infrastructure",
+            "severity": "high",
+            "label": "Forged Delivery Path",
+            "detail": "Timestamps in the Received chain run backwards: a later hop is dated before an earlier one. Servers cannot rewrite the clocks of servers further down the path, so at least one of these headers was fabricated.",
+            "mitre": [
+              "T1656"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "non-Received lines are ignored",
+      "args": [
+        [
+          {
+            "key": "subject",
+            "line": "Subject: hi"
+          },
+          {
+            "key": "received",
+            "line": "Received: from a.example (a.example [203.0.113.1]) by mx.example with ESMTP; Mon, 1 Jan 2024 10:00:00 +0000"
+          }
+        ]
+      ],
+      "expect": {
+        "hops": [
+          {
+            "index": 0,
+            "helo": "a.example",
+            "reverseDns": "a.example",
+            "ip": "203.0.113.1",
+            "by": "mx.example",
+            "timestamp": "Mon, 1 Jan 2024 10:00:00 +0000",
+            "heloMismatch": false,
+            "private": false
+          }
+        ],
+        "originIp": "203.0.113.1",
+        "originHost": "a.example",
+        "signals": [
+          {
+            "id": "single_hop_delivery",
+            "category": "infrastructure",
+            "severity": "low",
+            "label": "Direct Delivery, No Relay Path",
+            "detail": "The message records only one hop. Legitimate mail from an established provider almost always shows several. A single hop is typical of a script or host connecting straight to the recipient mail server."
+          }
+        ]
+      }
+    }
+  ]
+}
