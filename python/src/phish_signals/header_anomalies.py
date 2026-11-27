@@ -10,6 +10,7 @@ corroboration rather than as findings that stand on their own.
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from email.utils import parsedate_to_datetime
 
 from .domains import registrable_domain
@@ -46,7 +47,7 @@ _SCRIPT_MAILER_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
 )
 
 
-def _header_text(headers: dict[str, object], key: str) -> str | None:
+def _header_text(headers: Mapping[str, object], key: str) -> str | None:
     value = headers.get(key)
     if isinstance(value, str):
         return value
@@ -89,7 +90,7 @@ _ANGLE_BRACKETS_RE = re.compile(r"[<>]")
 
 
 def check_header_anomalies(
-    headers: dict[str, object] | None,
+    headers: Mapping[str, object] | None,
     header_lines: list[HeaderLine],
     chain: ReceivedChainAnalysis | None,
     auth: AuthCheckResult,

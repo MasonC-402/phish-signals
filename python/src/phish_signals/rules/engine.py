@@ -164,9 +164,7 @@ def _run_rule(
             continue
 
         override = overrides.get(signal_id)
-        signals.append(
-            _apply_override(signal, override) if override else signal
-        )
+        signals.append(_apply_override(signal, override) if override else signal)
 
     return signals, diagnostics
 
@@ -212,9 +210,7 @@ def rule_traceback(exc: BaseException) -> str:
     ``strict=True``, when you are debugging a rule and know where the output
     is going.
     """
-    return "".join(
-        traceback.format_exception(type(exc), exc, exc.__traceback__)
-    )
+    return "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
 
 
 __all__ = [

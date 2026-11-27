@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from phish_signals.header_anomalies import check_header_anomalies
+from phish_signals.types import HeaderLine, ReceivedChainAnalysis
 
 
 def _base_auth(signals=None):
@@ -21,9 +22,8 @@ def test_no_headers() -> None:
 
 def test_missing_message_id_and_date() -> None:
     headers = {"from": "a@example.com"}
-    result = check_header_anomalies(
-        headers, [{"key": "from", "line": "From: a@example.com"}], None, _base_auth()
-    )
+    lines: list[HeaderLine] = [{"key": "from", "line": "From: a@example.com"}]
+    result = check_header_anomalies(headers, lines, None, _base_auth())
     ids = {s["id"] for s in result["signals"]}
     assert "missing_message_id" in ids
     assert "missing_date_header" in ids
@@ -31,7 +31,7 @@ def test_missing_message_id_and_date() -> None:
 
 def test_message_id_domain_mismatch() -> None:
     headers = {"from": "a@example.com", "message-id": "<xyz@othercorp.com>"}
-    lines = [
+    lines: list[HeaderLine] = [
         {"key": "from", "line": "From: a@example.com"},
         {"key": "message-id", "line": "Message-Id: <xyz@othercorp.com>"},
     ]
@@ -43,7 +43,7 @@ def test_message_id_domain_mismatch() -> None:
 
 def test_script_mailer_detected() -> None:
     headers = {"x-mailer": "PHPMailer 6.5"}
-    lines = [{"key": "x-mailer", "line": "X-Mailer: PHPMailer 6.5"}]
+    lines: list[HeaderLine] = [{"key": "x-mailer", "line": "X-Mailer: PHPMailer 6.5"}]
     result = check_header_anomalies(headers, lines, None, _base_auth())
     ids = {s["id"] for s in result["signals"]}
     assert "script_generated_mail" in ids
@@ -52,7 +52,7 @@ def test_script_mailer_detected() -> None:
 
 def test_php_originating_script() -> None:
     headers = {}
-    lines = [
+    lines: list[HeaderLine] = [
         {
             "key": "x-php-originating-script",
             "line": "X-PHP-Originating-Script: 1000:x.php",
@@ -65,7 +65,7 @@ def test_php_originating_script() -> None:
 
 def test_bulk_sender_headers_benign() -> None:
     headers = {}
-    lines = [
+    lines: list[HeaderLine] = [
         {"key": "list-unsubscribe", "line": "List-Unsubscribe: <mailto:x@y.com>"},
         {"key": "message-id", "line": "Message-Id: <a@b.com>"},
     ]
@@ -76,7 +76,7 @@ def test_bulk_sender_headers_benign() -> None:
 
 def test_thread_hijack_pattern() -> None:
     headers = {"subject": "Re: quarterly invoice"}
-    lines = [
+    lines: list[HeaderLine] = [
         {"key": "subject", "line": "Subject: Re: quarterly invoice"},
         {"key": "in-reply-to", "line": "In-Reply-To: <a@b.com>"},
         {"key": "message-id", "line": "Message-Id: <c@d.com>"},
@@ -100,7 +100,7 @@ def test_thread_hijack_pattern() -> None:
 
 def test_authserv_id_mismatch() -> None:
     headers = {}
-    chain = {
+    chain: ReceivedChainAnalysis = {
         "hops": [
             {
                 "index": 0,

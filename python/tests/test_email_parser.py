@@ -11,6 +11,7 @@ from phish_signals.email_parser import (
     looks_like_raw_email,
     parse_email,
 )
+from phish_signals.types import RawAttachmentMeta
 
 
 def test_extract_urls_strips_trailing_punctuation() -> None:
@@ -96,6 +97,7 @@ def test_parse_email_raw_eml_basic_fields() -> None:
     assert parsed["subject"] == "Urgent: verify your account"
     assert parsed["urls"] == ["http://phish.example/login"]
     assert len(parsed["headerLines"]) == 6
+    assert parsed["headers"] is not None
     assert parsed["headers"]["from"] == '"A Sender" <sender@example.com>'
     assert parsed["date"] == "2024-01-01T10:00:00.000Z"
 
@@ -122,7 +124,7 @@ def test_parse_email_html_body_and_link_mismatch() -> None:
 
 def test_parse_email_extra_attachments_override_mime_attachments() -> None:
     raw = 'From: "Sender" <a@b.com>\r\nSubject: test\r\n\r\nBody text here.'
-    extra_attachments = [
+    extra_attachments: list[RawAttachmentMeta] = [
         {
             "filename": "invoice.exe",
             "contentType": "application/x-msdownload",

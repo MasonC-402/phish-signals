@@ -12,6 +12,7 @@ from PIL import Image
 from phish_signals.qr_check import (
     MAX_QR_IMAGE_BYTES,
     MAX_QR_IMAGES,
+    DecodableImage,
     scan_images_for_qr_codes,
 )
 
@@ -106,7 +107,7 @@ def test_corrupt_image_bytes_still_count_as_attempted() -> None:
 def test_stops_after_max_qr_images() -> None:
     blank_png = BytesIO()
     Image.new("RGB", (10, 10), color="white").save(blank_png, format="PNG")
-    images = [
+    images: list[DecodableImage] = [
         {"contentType": "image/png", "content": blank_png.getvalue()}
         for _ in range(MAX_QR_IMAGES + 3)
     ]

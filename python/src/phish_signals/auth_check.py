@@ -6,6 +6,7 @@ Port of ``typescript/src/authCheck.ts``.
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 
 from .domains import brand_label, registrable_domain
 from .types import AuthCheckResult, HeaderLine, Signal
@@ -151,7 +152,7 @@ def _check_domain_impersonation(
 
 
 def check_authentication(
-    headers: dict[str, object] | None, header_lines: list[HeaderLine]
+    headers: Mapping[str, object] | None, header_lines: list[HeaderLine]
 ) -> AuthCheckResult:
     # An empty-but-present dict (a real header block with no relevant
     # headers) must not be treated the same as "no headers at all" — only

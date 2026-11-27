@@ -189,7 +189,8 @@ try:
     # can never drift from pyproject.toml's version the way it silently had
     # (this stayed "0.1.0" through two real PyPI releases).
     __version__ = _installed_version("phish-signals")
-except PackageNotFoundError:  # pragma: no cover - only when running from an uninstalled checkout
+# Only reachable when running from an uninstalled checkout.
+except PackageNotFoundError:  # pragma: no cover
     __version__ = "0.0.0+unknown"
 
 #: Which submodules actually have an implementation behind them, as opposed to

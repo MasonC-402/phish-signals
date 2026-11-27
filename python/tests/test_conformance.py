@@ -28,6 +28,7 @@ import importlib
 import json
 import re
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -38,8 +39,10 @@ def _camel_to_snake(name: str) -> str:
     return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
 
 
-def _collect_cases() -> list[pytest.param]:
-    cases: list[pytest.param] = []
+def _collect_cases() -> list[Any]:
+    # pytest.param's return type (ParameterSet) is only importable from
+    # pytest's private _pytest package.
+    cases: list[Any] = []
     for path in sorted(VECTORS_DIR.rglob("*.json")):
         vector_file = json.loads(path.read_text(encoding="utf-8"))
         module_name = vector_file["module"]
@@ -61,9 +64,7 @@ def _collect_cases() -> list[pytest.param]:
     return cases
 
 
-@pytest.mark.parametrize(
-    "module_name, func_name, args, expected", _collect_cases()
-)
+@pytest.mark.parametrize("module_name, func_name, args, expected", _collect_cases())
 def test_conformance(
     module_name: str, func_name: str, args: list[object], expected: object
 ) -> None:

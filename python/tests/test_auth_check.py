@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from phish_signals.auth_check import check_authentication
+from phish_signals.types import HeaderLine
 
 
-def _lines(*pairs: tuple[str, str]) -> list[dict[str, str]]:
+def _lines(*pairs: tuple[str, str]) -> list[HeaderLine]:
     return [{"key": key.lower(), "line": f"{key}: {value}"} for key, value in pairs]
 
 
@@ -91,7 +92,7 @@ def test_forged_trailing_auth_results_header_discarded() -> None:
     # bottom, positionally indistinguishable from a genuine origin hop by
     # age alone. Only the N=receivedCount most recent Authentication-Results
     # headers are trusted, which is what catches it here.
-    lines = [
+    lines: list[HeaderLine] = [
         {
             "key": "authentication-results",
             "line": (

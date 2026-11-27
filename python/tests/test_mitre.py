@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from phish_signals.mitre import map_techniques, technique_url
+from phish_signals.types import Signal
 
 
 def test_technique_url_parent() -> None:
@@ -16,7 +17,7 @@ def test_technique_url_sub_technique() -> None:
 
 
 def test_map_techniques_dedupes_and_sorts() -> None:
-    signals = [
+    signals: list[Signal] = [
         {
             "id": "a",
             "category": "payload",
@@ -40,7 +41,7 @@ def test_map_techniques_dedupes_and_sorts() -> None:
 
 
 def test_map_techniques_ignores_unknown_ids() -> None:
-    signals = [
+    signals: list[Signal] = [
         {
             "id": "a",
             "category": "payload",
@@ -54,7 +55,7 @@ def test_map_techniques_ignores_unknown_ids() -> None:
 
 
 def test_map_techniques_no_mitre_key() -> None:
-    signals = [
+    signals: list[Signal] = [
         {
             "id": "a",
             "category": "payload",

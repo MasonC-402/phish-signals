@@ -30,8 +30,8 @@ from phish_signals import check_content, score_signals
 result = check_content("ACT NOW or your account will be suspended!")
 scored = score_signals(result["signals"])
 
-print(scored["verdict"])   # "Low Risk"
-print(scored["score"])     # 6
+print(scored["verdict"])  # "Low Risk"
+print(scored["score"])  # 6
 for signal in scored["signals"]:
     print(f"  [{signal['severity']}] {signal['label']}: {signal['detail']}")
 ```
@@ -43,25 +43,31 @@ from phish_signals.rules import Rule, RuleContext, Ruleset, evaluate_ruleset
 from phish_signals import score_signals
 from phish_signals.types import Signal
 
+
 def check_vendor_lookalike(context: RuleContext) -> list[Signal]:
     if "acme-payments" not in (context.sender_domain or ""):
         return []
-    return [{
-        "id": "acme_vendor_lookalike",
-        "category": "identity",
-        "severity": "high",
-        "label": "Vendor Lookalike Domain",
-        "detail": f"Sender domain {context.sender_domain} imitates our vendor.",
-    }]
+    return [
+        {
+            "id": "acme_vendor_lookalike",
+            "category": "identity",
+            "severity": "high",
+            "label": "Vendor Lookalike Domain",
+            "detail": f"Sender domain {context.sender_domain} imitates our vendor.",
+        }
+    ]
+
 
 my_rules = Ruleset(
     name="acme",
-    rules=(Rule(
-        id="acme.vendor_lookalike",
-        emits=frozenset({"acme_vendor_lookalike"}),
-        evaluate=check_vendor_lookalike,
-        tags=frozenset({"identity"}),
-    ),),
+    rules=(
+        Rule(
+            id="acme.vendor_lookalike",
+            emits=frozenset({"acme_vendor_lookalike"}),
+            evaluate=check_vendor_lookalike,
+            tags=frozenset({"identity"}),
+        ),
+    ),
 )
 
 # Run and score
@@ -271,9 +277,11 @@ combined = CONTENT_RULESET.with_rules(list(custom))
 
 ```python
 # Gift-card language is normal in our org
-quieter = CONTENT_RULESET.with_severity_overrides({
-    "financial_request": "info",
-})
+quieter = CONTENT_RULESET.with_severity_overrides(
+    {
+        "financial_request": "info",
+    }
+)
 ```
 
 ## Testing rules

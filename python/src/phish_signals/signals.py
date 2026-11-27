@@ -116,9 +116,7 @@ def _label_sort_key(label: str) -> tuple[str, str]:
     reaches that gap. Worth re-checking if that ever stops being true.
     """
     primary = "".join(
-        c
-        for c in unicodedata.normalize("NFD", label)
-        if not unicodedata.combining(c)
+        c for c in unicodedata.normalize("NFD", label) if not unicodedata.combining(c)
     )
     return (primary.lower(), label.swapcase())
 
@@ -130,9 +128,7 @@ def _sorted_by_severity(signals: Iterable[Signal]) -> list[Signal]:
     )
 
 
-def _score_category(
-    category: EvidenceCategory, signals: list[Signal]
-) -> CategoryScore:
+def _score_category(category: EvidenceCategory, signals: list[Signal]) -> CategoryScore:
     ordered = _sorted_by_severity(signals)
     points = [SEVERITY_POINTS.get(s["severity"], 0) for s in ordered]
 
@@ -191,9 +187,7 @@ def score_signals(all_signals: list[Signal]) -> ScoredEvidence:
         if scored["signals"]
     ]
 
-    worst_severity_rank = max(
-        (_severity_rank_of(s) for s in suspicious), default=0
-    )
+    worst_severity_rank = max((_severity_rank_of(s) for s in suspicious), default=0)
     raw = sum(c["score"] for c in categories) + _benign_adjustment(
         benign_signals, worst_severity_rank
     )
@@ -247,9 +241,7 @@ def assess_confidence(available: Availability) -> Confidence:
         gaps.append("No attachment metadata was present in what was submitted.")
 
     checks = list(available.values())
-    completeness = (
-        sum(1 for check in checks if check) / len(checks) if checks else 0.0
-    )
+    completeness = sum(1 for check in checks if check) / len(checks) if checks else 0.0
 
     level: Literal["high", "medium", "low"] = "low"
     if completeness >= 0.8:

@@ -50,11 +50,26 @@ def sanitize_input(raw: Any, max_length: int = DEFAULT_MAX_LENGTH) -> str:
 # points rather than pasting the characters themselves, so this source file
 # stays plain ASCII and the exact set being stripped is auditable at a glance.
 _DANGEROUS_CODEPOINTS = (
-    0x200B, 0x200C, 0x200D, 0x200E, 0x200F,  # zero-width space/joiners, LRM/RLM
-    0x202A, 0x202B, 0x202C, 0x202D, 0x202E,  # LRE/RLE/PDF/LRO/RLO
-    0x2066, 0x2067, 0x2068, 0x2069,          # LRI/RLI/FSI/PDI
-    0x2060, 0x2061, 0x2062, 0x2063, 0x2064,  # word joiner + invisible operators
-    0xFEFF,                                  # BOM / zero-width no-break space
+    0x200B,
+    0x200C,
+    0x200D,
+    0x200E,
+    0x200F,  # zero-width space/joiners, LRM/RLM
+    0x202A,
+    0x202B,
+    0x202C,
+    0x202D,
+    0x202E,  # LRE/RLE/PDF/LRO/RLO
+    0x2066,
+    0x2067,
+    0x2068,
+    0x2069,  # LRI/RLI/FSI/PDI
+    0x2060,
+    0x2061,
+    0x2062,
+    0x2063,
+    0x2064,  # word joiner + invisible operators
+    0xFEFF,  # BOM / zero-width no-break space
 )
 
 _DANGEROUS_UNICODE = re.compile(

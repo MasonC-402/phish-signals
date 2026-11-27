@@ -16,10 +16,10 @@ from phish_signals.content_check import (
     check_dangerous_schemes,
     check_link_text,
 )
-from phish_signals.types import LinkMismatch, Signal
+from phish_signals.types import LinkMismatch, Signal, SignalResult
 
 
-def signals_by_id(result: dict) -> dict[str, Signal]:
+def signals_by_id(result: SignalResult) -> dict[str, Signal]:
     return {s["id"]: s for s in result["signals"]}
 
 
@@ -140,9 +140,7 @@ class TestDisplayNameSpoof:
         result = check_content(
             "Click here", from_address='"PayPal" <noreply@paypal.com>'
         )
-        assert not any(
-            s["id"] == "display_name_brand_spoof" for s in result["signals"]
-        )
+        assert not any(s["id"] == "display_name_brand_spoof" for s in result["signals"])
 
     def test_address_spoof_detected(self) -> None:
         result = check_content(
@@ -172,9 +170,7 @@ class TestExcessiveCaps:
 
     def test_does_not_fire_on_normal_text(self) -> None:
         result = check_content("This is a normal email with ONE acronym.")
-        assert not any(
-            s["id"] == "excessive_capitalization" for s in result["signals"]
-        )
+        assert not any(s["id"] == "excessive_capitalization" for s in result["signals"])
 
 
 # --------------------------------------------------------------------------
@@ -203,12 +199,16 @@ class TestCheckLinkText:
     def test_plural_in_detail(self) -> None:
         mismatches: list[LinkMismatch] = [
             {
-                "text": "a", "href": "b",
-                "claimedDomain": "a.com", "actualDomain": "b.com",
+                "text": "a",
+                "href": "b",
+                "claimedDomain": "a.com",
+                "actualDomain": "b.com",
             },
             {
-                "text": "c", "href": "d",
-                "claimedDomain": "c.com", "actualDomain": "d.com",
+                "text": "c",
+                "href": "d",
+                "claimedDomain": "c.com",
+                "actualDomain": "d.com",
             },
         ]
         result = check_link_text(mismatches)
@@ -220,8 +220,10 @@ class TestCheckLinkText:
 
     def test_mitre_mapping(self) -> None:
         mismatch: LinkMismatch = {
-            "text": "x", "href": "y",
-            "claimedDomain": "a.com", "actualDomain": "b.com",
+            "text": "x",
+            "href": "y",
+            "claimedDomain": "a.com",
+            "actualDomain": "b.com",
         }
         result = check_link_text([mismatch])
         assert result["signals"][0]["mitre"] == ["T1566.002", "T1204.001"]

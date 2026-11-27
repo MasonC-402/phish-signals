@@ -401,7 +401,8 @@ def parse_rule_file(data: Mapping[str, Any], *, where: str = "<file>") -> list[R
 
     version = data.get("version")
     is_valid_version = (
-        isinstance(version, int) and not isinstance(version, bool)
+        isinstance(version, int)
+        and not isinstance(version, bool)
         and version == FORMAT_VERSION
     )
     if not is_valid_version:

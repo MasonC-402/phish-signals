@@ -754,7 +754,8 @@ def test_invalid_severity_override_is_rejected() -> None:
         Ruleset(
             name="test",
             rules=(static_rule("core.a", "sig_a"),),
-            severity_overrides={"sig_a": "urgent"},
+            # Deliberately not a Severity: this is what the test checks.
+            severity_overrides={"sig_a": "urgent"},  # ty: ignore[invalid-argument-type]
         )
 
 
@@ -774,21 +775,28 @@ def test_invalid_signal_category_is_reported_as_malformed() -> None:
     """A signal with category='other' must not slip through."""
 
     def bad_category(ctx: RuleContext) -> list[Signal]:
-        return [cast(Signal, {
-            "id": "sig",
-            "category": "other",
-            "severity": "low",
-            "label": "Bad",
-            "detail": "x",
-        })]
+        return [
+            cast(
+                Signal,
+                {
+                    "id": "sig",
+                    "category": "other",
+                    "severity": "low",
+                    "label": "Bad",
+                    "detail": "x",
+                },
+            )
+        ]
 
     ruleset = Ruleset(
         name="test",
-        rules=(Rule(
-            id="acme.bad",
-            emits=frozenset({"sig"}),
-            evaluate=bad_category,
-        ),),
+        rules=(
+            Rule(
+                id="acme.bad",
+                emits=frozenset({"sig"}),
+                evaluate=bad_category,
+            ),
+        ),
     )
     run = evaluate_ruleset(ruleset, EMPTY_CONTEXT)
     assert run["signals"] == []
@@ -800,14 +808,18 @@ def test_generator_rule_that_raises_is_isolated() -> None:
 
     def gen_boom(ctx: RuleContext) -> list[Signal]:
         def _gen():
-            yield cast(Signal, {
-                "id": "sig",
-                "category": "social",
-                "severity": "low",
-                "label": "L",
-                "detail": "d",
-            })
+            yield cast(
+                Signal,
+                {
+                    "id": "sig",
+                    "category": "social",
+                    "severity": "low",
+                    "label": "L",
+                    "detail": "d",
+                },
+            )
             raise RuntimeError("mid-iteration failure")
+
         return list(_gen())  # type: ignore[return-value]
 
     ruleset = Ruleset(
