@@ -5,6 +5,8 @@ since this module's whole job is wiring those together correctly."""
 
 from __future__ import annotations
 
+import pytest
+
 from phish_signals.auth_check import check_authentication
 from phish_signals.combine_results import AnalysisInput, combine_results
 from phish_signals.content_check import (
@@ -108,3 +110,53 @@ def test_iocs_and_categories_present_for_risky_message() -> None:
         any(c["category"] == "payload" for c in result["categories"])
         or result["score"] == 0
     )
+
+
+def test_full_pipeline_makes_no_network_calls(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The package's "no network calls" guarantee, enforced.
+
+    Every route out of the process that the stdlib offers goes through one
+    of these, so blocking them for the duration of a full analysis turns any
+    accidental lookup (a DNS resolution of a link's hostname, say) into a
+    failing test instead of a silent behaviour change.
+    """
+    import socket
+
+    attempts: list[str] = []
+
+    def blocked(name):
+        def _raise(*args, **kwargs):
+            attempts.append(name)
+            raise AssertionError(f"network access attempted: {name}")
+
+        return _raise
+
+    for name in ("connect", "connect_ex"):
+        monkeypatch.setattr(socket.socket, name, blocked(f"socket.{name}"))
+    for name in (
+        "getaddrinfo",
+        "gethostbyname",
+        "gethostbyname_ex",
+        "gethostbyaddr",
+        "create_connection",
+    ):
+        monkeypatch.setattr(socket, name, blocked(name))
+
+    raw = (
+        'From: "PayPal Security" <security@paypa1-secure.com>\r\n'
+        "Subject: Urgent: Verify your account now\r\n"
+        "Received: from paypa1-secure.com (unknown [10.0.0.1]) by "
+        "mx.example.org; Mon, 1 Jan 2024 10:00:05 +0000\r\n"
+        "Authentication-Results: mx.example.org; spf=fail; dkim=fail; dmarc=fail\r\n"
+        "Content-Type: text/html\r\n"
+        "\r\n"
+        '<html><body><a href="http://paypa1-secure.com/verify">'
+        "https://paypal.com/account</a> http://192.168.0.1/login.php "
+        "https://bit.ly/3abc</body></html>\r\n"
+    )
+    result = _run_pipeline(raw)
+    assert result["verdict"] in ("Medium Risk", "High Risk")
+    assert attempts == []
+    # The guard itself works — otherwise an empty list proves nothing.
+    with pytest.raises(AssertionError, match="network access attempted"):
+        socket.getaddrinfo("example.com", 80)
