@@ -5,9 +5,10 @@ Port of ``typescript/src/contentCheck.ts``.
 The four phrase-list rules (urgency, credential request, financial request,
 authority impersonation) live in ``rules/data/content.json`` as declarative
 rules — a copy of the repo's canonical ``rules/core/content.json``, shared
-with the TypeScript implementation (see ``rules/README.md``). The remaining checks — generic greeting detection, display-name
-spoofing, excessive capitalization — are code rules because they need
-regex or structured logic that the declarative grammar deliberately excludes.
+with the TypeScript implementation (see ``rules/README.md``). The remaining
+checks — generic greeting detection, display-name spoofing, excessive
+capitalization — are code rules because they need regex or structured logic
+that the declarative grammar deliberately excludes.
 
 ``check_link_text`` and ``check_dangerous_schemes`` are standalone functions
 rather than rules: they operate on pre-parsed structured data
