@@ -13,17 +13,24 @@ Extracted from [farksecurity.com's phish-report tool](https://farksecurity.com/p
 | Implementation | Status |
 | --------------- | ------ |
 | [`typescript/`](typescript/) | Published — `npm install @farksecurity/phish-signals` |
-| [`python/`](python/) | Fully ported and conformant; `pip install phish-signals` once released |
+| [`python/`](python/) | Published — `pip install phish-signals` |
 
 The two are independent implementations of the same detection logic, not a
 core-plus-binding — each is a complete, standalone package you can install and
 use on its own. They are expected to agree on *what* a given input is: the
 same signal ids, categories, and severities for the same input. They are not
 expected to version in lockstep, and each ships its own release process:
-`.github/workflows/publish.yml` builds and tags npm releases as `npm-v*`,
-`publish-pypi.yml` does the same for PyPI as `pypi-v*`. The PyPI workflow
-exists but is dormant until a trusted publisher is configured on PyPI's side
-(see that file's comment) and there's an actual release to cut.
+`.github/workflows/publish.yml` publishes to npm on an `npm-v*` tag, and
+`publish-pypi.yml` publishes to PyPI on a `pypi-v*` tag. Both use trusted
+publishing (OIDC), so no registry token is stored in the repo.
+`.github/workflows/ci.yml` runs both test suites, the conformance vectors,
+the static checks and a rule-data sync check on every push and pull request.
+
+## Shared rules
+
+[`rules/`](rules/) holds detection rules written as data. Both
+implementations load the same rule files, so a phrase list is written once.
+See [rules/README.md](rules/README.md).
 
 ## Conformance
 
